@@ -1,0 +1,46 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "parch"
+version = "0.1.0"
+description = "PARCH water-shell workflow: prep, shell setup, submit, analysis, PARCH values"
+readme = "README.md"
+requires-python = ">=3.8"
+license = { text = "MIT" }
+authors = [
+    { name = "Xuyang Qin", email = "tsinyang0331@gmail.com" },
+]
+keywords = ["molecular-dynamics", "gromacs", "mdanalysis", "hydration", "PARCH"]
+dependencies = [
+    "numpy",
+    "MDAnalysis>=2.0",
+]
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: POSIX :: Linux",
+    "Topic :: Scientific/Engineering :: Chemistry",
+]
+
+[project.urls]
+Homepage = "https://github.com/<your-username>/parch"
+Repository = "https://github.com/<your-username>/parch"
+
+[project.scripts]
+parch = "parch.cli:cli_parch"
+parch_prep = "parch.cli:cli_prep"
+parch_shell = "parch.cli:cli_shell"
+parch_submit = "parch.cli:cli_submit"
+parch_analysis = "parch.cli:cli_analysis"
+parch_calpv = "parch.cli:cli_calpv"
+
+# The `parch` package ships its data directory (mdp/itp/INP/evp templates) as
+# package data, so a normal `pip install .` includes everything the tools need
+# at runtime -- no editable install required.
+[tool.setuptools]
+packages = ["parch"]
+
+[tool.setuptools.package-data]
+parch = ["backup_annealing/**"]

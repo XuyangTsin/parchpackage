@@ -1,0 +1,26 @@
+# Python build / install artifacts
+__pycache__/
+*.py[cod]
+*.egg-info/
+*.egg
+build/
+dist/
+.eggs/
+
+# Editable-install / packaging metadata
+*.pth
+
+# Editor / OS cruft
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Force fields are not redistributed in this repo (size + CHARMM licensing);
+# kept locally but excluded from the package.
+parch/forcefields/
+
+# Notes:
+#  - parch/backup_annealing/ IS tracked (package data the tools load at runtime).
+#  - The cluster job scripts parch/backup_annealing/evp_*.sh are author-specific
+#    templates; edit them for your scheduler before using `parch submit`.
