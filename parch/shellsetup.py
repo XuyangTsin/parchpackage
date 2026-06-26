@@ -26,7 +26,7 @@ Usage (also callable as ``parch shellsetup ...`` / ``parch_shell ...``):
     parch shellsetup -f input.gro -p topol.top -o W_init.gro \
         -separateshell no -dshell 4.15 -netcharge 0
 
-    # multiple shell regions (one 'thickness_A, start:end' per line in the file)
+    # multiple shell regions (one 'thickness_A start:end' per line in the file)
     parch shellsetup -f input.gro -p topol.top -o W_init.gro \
         -separateshell yes -shelldef separateshell.txt -netcharge 0
 """
@@ -157,7 +157,7 @@ def build_parser():
                         "yes: read per-group thicknesses from -shelldef.")
     p.add_argument("-shelldef",
                    help="Shell-definition file (required with -separateshell yes). Each "
-                        "non-comment line is 'thickness_A, start:end', e.g. '4.15, 1:195'.")
+                        "non-comment line is 'thickness_A start:end', e.g. '4.15 1:195'.")
 
     p.add_argument("-datadir", default=DEFAULT_DATADIR,
                    help="Directory holding auxiliary files (hydrated-ion .gro and "
@@ -169,9 +169,9 @@ def parse_shelldef(path):
     """Parse a shell-definition file into a list of ((start, end), thickness).
 
     Format: one group per line, '#'-prefixed comments and blank lines ignored:
-        # shell_thickness(A), residue_range
-        4.15, 1:195
-        4.50, 196:200
+        # shell_thickness(A) residue_range
+        4.15 1:195
+        4.50 196:200
     """
     if not os.path.isfile(path):                                   # rule 1
         die("-shelldef file not found: %s" % path)
@@ -182,15 +182,16 @@ def parse_shelldef(path):
             line = raw.split("#", 1)[0].strip()       # drop inline / full comments
             if not line:
                 continue
-            if "," not in line:
-                die("shelldef line %d: expected 'thickness, start:end', got %r"
+            parts = line.split()
+            if len(parts) != 2:
+                die("shelldef line %d: expected 'thickness start:end', got %r"
                     % (lineno, raw.strip()))
-            tpart, rpart = line.split(",", 1)
+            tpart, rpart = parts
             try:
-                thickness = float(tpart.strip())
+                thickness = float(tpart)
             except ValueError:
-                die("shelldef line %d: invalid thickness %r" % (lineno, tpart.strip()))
-            rng = parse_range(rpart.strip())                       # rule 2
+                die("shelldef line %d: invalid thickness %r" % (lineno, tpart))
+            rng = parse_range(rpart)                               # rule 2
             groups.append((rng, thickness))
 
     if not groups:

@@ -310,7 +310,7 @@ def main(argv=None):
     if args.keep:
         keep_idx = parse_index_selection(args.keep, len(groups))
     else:
-        keep_idx = ask_selection("Enter molecule group numbers to KEEP (e.g. 1 2 4): ", len(groups))
+        keep_idx = ask_selection("Enter molecule group numbers to KEEP (e.g. 1 2 4 5-10): ", len(groups))
     keep_groups = [groups[i - 1] for i in keep_idx]
     keep_mol_line_idx = set(g["line_idx"] for g in keep_groups)   # positional, exact lines
     print("Keeping: %s" % ", ".join("%s(%d)" % (g["name"], g["count"]) for g in keep_groups))
@@ -362,7 +362,7 @@ def main(argv=None):
         print("\nThe following itp files are in your .top:")
         for n, (_, path) in enumerate(includes, 1):
             print("%-4d  %s" % (n, path))
-        print("\n!! Please READ the notice and SELECT the .itp files to keep for PARCH:\n"
+        print("\n!! Please READ the notice and SELECT the .itp files to KEEP for PARCH (e.g. 1 2 4 5-10):\n"
               "Which should #include the following compents:\n"
               "!!   i.   the total forcefield file (e.g. forcefield.itp)\n"
               "!!   ii.  itps corresponding to molecules you kept (e.g. PROA.itp, PROB.itp, DNAA.itp)\n"

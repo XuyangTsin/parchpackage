@@ -69,7 +69,7 @@ def build_parser():
                    help="no: apply -da uniformly. yes: per-residue cutoffs from -shelldef.")
     p.add_argument("-shelldef",
                    help="Shell-definition file (required with -separateshell yes); each "
-                        "non-comment line is 'thickness_A, start:end', e.g. '4.15, 1:195'.")
+                        "non-comment line is 'thickness_A start:end', e.g. '3.15 1:195'.")
     p.add_argument("-newwater", nargs="+", default=[],
                    help="Extra solvent residue name(s) to treat as water, in addition to "
                         "the defaults (%s)." % " ".join(DEFAULT_SOLVENT))

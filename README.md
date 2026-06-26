@@ -100,12 +100,44 @@ type / chain, choose which to keep, and write a trimmed structure + topology
 ready for `shellsetup`. The molecule→atom mapping comes from the `.tpr`; the
 coordinates come from the `.gro`.
 
+**IMPORTANT:** Before running the `setup` command, ensure that **all heavy atoms** of the 
+molecules you want to run with PARCH have position restraints defined in their 
+corresponding `.itp` files. 
+
+The position restraints should be enclosed by the `POSRES` preprocessor directive, for example:
+
+```
+#ifdef POSRES
+[ position_restraints ]
+    1     1    POSRES_FC_BB    POSRES_FC_BB    POSRES_FC_BB   
+    5     1    POSRES_FC_BB    POSRES_FC_BB    POSRES_FC_BB   
+    7     1    POSRES_FC_SC    POSRES_FC_SC    POSRES_FC_SC   
+   10     1    POSRES_FC_SC    POSRES_FC_SC    POSRES_FC_SC   
+   11     1    POSRES_FC_SC    POSRES_FC_SC    POSRES_FC_SC   
+   12     1    POSRES_FC_SC    POSRES_FC_SC    POSRES_FC_SC   
+   13     1    POSRES_FC_BB    POSRES_FC_BB    POSRES_FC_BB   
+   14     1    POSRES_FC_SC    POSRES_FC_SC    POSRES_FC_SC   
+   15     1    POSRES_FC_SC    POSRES_FC_SC    POSRES_FC_SC
+   .......
+   .......  
+#endif
+```
+
+In default, these position restraints are activated in mdp options as:
+
+```
+define                  = -DPOSRES -DPOSRES_FC_BB=10000 -DPOSRES_FC_SC=10000
+```
+
+`POSRES_FC_BB` and `POSRES_FC_SC` correspond to the restraint force constants 
+(in kJ mol<sup>−1</sup> nm<sup>−2</sup>) applied to backbone and side-chain heavy atoms, respectively. 
+
 ```bash
 parch prep -f md.gro -s md.tpr -pi topol.top -o solute.gro -po solute.top
 ```
-!!Please Read the NOTICE printed when excuting the command for guidance!!
+**!!Please Read the NOTICE printed when excuting the command for guidance!!**
 
-First, it prints a numbered table of molecules and asks which to KEEP (keyboard, e.g. 1 2 4),
+First, it prints a numbered table of molecules and asks which to KEEP (keyboard, e.g. 1 2 4 5-10),
 
 ```
 #group  molecule        number   atoms
@@ -179,23 +211,28 @@ builds a hydrated shell with optional neutralising counterions.
 parch shellsetup -f solute.gro -p solute.top -o W_init.gro -separateshell no -dshell 4.15 -netcharge 0
 ```
 
-**Multiple shell regions** — any number of `(thickness, residue-range)` groups
+**Multiple shell regions** — any number of `(thickness  residue-range)` groups
 from a shell-definition file:
 
 ```bash
 parch shellsetup \
     -f solute.gro -p solute.top -o W_init.gro \
-    -separateshell yes -shelldef separateshell.txt -netcharge 0
+    -separateshell yes -shelldef shelldef_setup.txt -netcharge 0
 ```
 
-`separateshell.txt` (one group per line; `#` comments and blank lines ignored):
+`shelldef_setup.txt` (one group per line; `#` comments and blank lines ignored):
 
 ```text
-# shell_thickness(Å), residue_range
-4.15, 1:195
-4.50, 196:200
-4.60, 201:220
+# shell_thickness(Å)  residue_range
+4.15  1:195
+4.50  196:200
+4.60  201:220
 ```
+
+**Shell thickness for setup:**
+For protein: 4.15 Å.
+For DNA and RNA: 4.80 Å
+
 
 Validation (separateshell): the file must exist, ranges must be valid, must not
 overlap, every referenced residue ID must exist in the structure, and all
@@ -266,7 +303,7 @@ go to `mid_*/analysis/`.
 parch analysis -path shell -da 3.15 -separateshell no
 
 # per-residue cutoffs from a shell-definition file
-parch analysis -path shell -separateshell yes -shelldef separateshell.txt
+parch analysis -path shell -separateshell yes -shelldef shelldef_analysis.txt
 ```
 
 | Option           | Meaning                                                             |
@@ -279,7 +316,15 @@ parch analysis -path shell -separateshell yes -shelldef separateshell.txt
 | `-blocks`        | block-mapping file to split residues into sub-units (e.g. DNA sugar/base) |
 | `-overwrite`     | re-run even if a `mid_*/analysis/` already looks complete           |
 
-**`-blocks`** file — split chosen residues into named atom sub-units (one or
+
+**`-shelldef shelldef_analysis.txt`** the format is consistent with the one used for setup. However,
+the shell cutoff for analysis can be **different than setup**.
+
+**Shell cutoff for setup:**
+For protein: 3.15 Å.
+For DNA and RNA: 4.80 Å
+
+**`-blocks blocks.txt`** file — split chosen residues into named atom sub-units (one or
 more lines per residue range; whitespace-separated, no commas):
 
 ```text
