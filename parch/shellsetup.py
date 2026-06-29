@@ -355,7 +355,7 @@ def main(argv=None):
 
     # MDAnalysis selection fragments shared throughout.
     solute_sel = " or ".join("(resid %d:%d)" % (r[0], r[1]) for r, _ in groups)
-    r_line = "r " + " ".join("%d-%d" % (r[0], r[1]) for r, _ in groups)
+    r_line = "r %d-%d" % (min(r[0] for r, _ in groups), max(r[1] for r, _ in groups))
 
     # ---- create the shell/ output directory and work inside it ------------ #
     # Inputs are read from the launch directory (absolute paths above); every
