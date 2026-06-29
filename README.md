@@ -123,7 +123,7 @@ The position restraints should be enclosed by the `POSRES` preprocessor directiv
 #endif
 ```
 
-In default, these position restraints are activated in mdp options as:
+In default, these position restraints are activated in the mdp options for later annealing process as:
 
 ```
 define                  = -DPOSRES -DPOSRES_FC_BB=10000 -DPOSRES_FC_SC=10000
@@ -148,7 +148,7 @@ First, it prints a numbered table of molecules and asks which to KEEP (keyboard,
 5       TIP3            27337    82011
 ```
 
-After selecting, it modifies the `.top` file, and reports the renumbered 
+**IMPORTANT**: After selecting, it modifies the `.top` file, and reports the renumbered 
 residue ranges (Consecutive, and starting from 1) in the output (useful for if you want to use `-shelldef` later):
 
 ```
@@ -185,6 +185,9 @@ Additionally, the tailored `.itp` of ions are automatically included.
 #include "/home/xqin10/parch_platform/parch_package/backup_annealing/CLA.itp"
 #include "/home/xqin10/parch_platform/parch_package/backup_annealing/SOD.itp"
 ```
+
+**IMPORTANT**: The net charge of the retained molecules will be reported at the end. This 
+value should be provided to the `shellsetup` to properly place counterions.
 
 | Option       | Meaning                                                                 |
 | ------------ | ----------------------------------------------------------------------- |
