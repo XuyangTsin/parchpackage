@@ -6,7 +6,8 @@ Preparation step *before* ``parch shellsetup``: from an equilibrated GROMACS
 system (``md.gro`` + ``md.tpr`` + ``.top``) it lists every molecule type / chain,
 lets you choose which ones to keep, then writes a trimmed structure (``-o``) and
 a matching topology (``-po``) containing only the kept molecules. You are also
-asked which force-field/``#include`` lines to keep.
+asked which force-field/``#include`` lines to keep, and optionally walked through
+building a ``shellsetup -shelldef`` file (per-molecule shell thicknesses).
 
 The molecule -> atom mapping (which the .gro alone does not carry) is taken from
 the .tpr via MDAnalysis; the coordinates are taken from the .gro.
@@ -21,6 +22,7 @@ import argparse
 import os
 import re
 import sys
+import time
 
 import numpy as np
 import MDAnalysis as mda
@@ -83,6 +85,50 @@ def ask_ionff():
         if ans in ION_ITPS:
             return ans
         print("Please type 'charmm' or 'amber'.")
+
+
+def ask_yesno(prompt):
+    """Prompt for a yes/no answer; loop on invalid input, abort on EOF."""
+    while True:
+        try:
+            ans = input(prompt).strip().lower()
+        except EOFError:
+            die("no yes/no answer provided (running non-interactively?). Use -separateshell yes|no.")
+        if ans in ("yes", "y"):
+            return True
+        if ans in ("no", "n"):
+            return False
+        print("Please type 'yes' or 'no'.")
+
+
+def ask_group_indices(prompt, n_max):
+    """Prompt for an optional index selection; Enter (blank) means 'none'."""
+    while True:
+        try:
+            raw = input(prompt).strip()
+        except EOFError:
+            die("no selection provided (running non-interactively?).")
+        if not raw:
+            return []
+        return parse_index_selection(raw, n_max)
+
+
+def ask_thickness_value(prompt):
+    """Prompt for a positive shell thickness (Angstrom); loop until valid."""
+    while True:
+        try:
+            raw = input(prompt).strip()
+        except EOFError:
+            die("no thickness provided (running non-interactively?).")
+        try:
+            v = float(raw)
+        except ValueError:
+            print("Please enter a number.")
+            continue
+        if v <= 0:
+            print("Thickness must be positive.")
+            continue
+        return v
 
 
 # =========================================================================== #
@@ -253,6 +299,19 @@ def write_topology(src_lines, dst_top, keep_mol_line_idx, keep_include_idx,
         fh.writelines(out)
 
 
+def write_shelldef(path, groups):
+    """Write a shellsetup -shelldef file: one 'thickness  start:end' line per
+    (start, end, thickness) group, e.g.:
+        # shell_thickness, resid range
+        4.15  1:298
+        4.80  401:450
+    """
+    with open(path, "w") as fh:
+        fh.write("# shell_thickness, resid range\n")
+        for a, b, t in groups:
+            fh.write("%-6.2f%d:%d\n" % (t, a, b))
+
+
 # =========================================================================== #
 # Argument parsing
 # =========================================================================== #
@@ -273,11 +332,17 @@ def build_parser():
                                    "(default when -keep is given: keep all includes).")
     p.add_argument("-renumber", choices=["yes", "no"], default="yes",
                    help="Renumber kept residues sequentially from 1 in the output "
-                        "structure (default: yes), so it is ready for parch shellsetup.")
+                        "structure (default: yes), which is REQUIRED for parch shellsetup.")
     p.add_argument("-ionff", choices=sorted(ION_ITPS),
                    help="Force field for the PARCH counter-ion .itp includes added to the "
                         "output topology (charmm -> CLA/SOD, amber -> Cl-/Na+). "
                         "If omitted, you are prompted.")
+    p.add_argument("-separateshell", choices=["yes", "no"],
+                   help="Whether to interactively build a shellsetup -shelldef file "
+                        "(per-molecule shell thicknesses). If omitted, you are prompted.")
+    p.add_argument("-shelldefout", default="shelldef.txt",
+                   help="Output shell-definition file written when -separateshell yes "
+                        "(default: %(default)s).")
     return p
 
 
@@ -354,6 +419,7 @@ def main(argv=None):
           % (" (renumbered)" if args.renumber == "yes" else " (original)"))
     for name, a, b in res_map:
         print("    %-14s %d:%d" % (name, a, b))
+    time.sleep(2)
 
     # ---- choose force-field / #include lines to keep ---------------------- #
     includes = collect_includes(top_lines)
@@ -362,6 +428,7 @@ def main(argv=None):
         print("\nThe following itp files are in your .top:")
         for n, (_, path) in enumerate(includes, 1):
             print("%-4d  %s" % (n, path))
+        time.sleep(1)
         print("\n!! Please READ the notice and SELECT the .itp files to KEEP for PARCH (e.g. 1 2 4 5-10):\n"
               "Which should #include the following compents:\n"
               "!!   i.   the total forcefield file (e.g. forcefield.itp)\n"
@@ -418,11 +485,62 @@ def main(argv=None):
     print("Wrote %s  (kept [molecules]: %s)" % (args.out_top, kept_desc))
     print("The counter ions' itp were added for %s forcefield." % ionff)
 
+    # ---- optional: build a shellsetup -shelldef file ----------------------- #
+    if args.separateshell is not None:
+        want_shelldef = args.separateshell == "yes"
+    else:
+        want_shelldef = ask_yesno(
+            "\nWhether you need to define different shell thickness among your molecules "
+            "(e.g. parch shellsetup -separateshell yes)? It will help you prepare the file "
+            "for -shelldef %s.\nType yes/no: " % args.shelldefout)
+
+    if want_shelldef:
+        print("\nKept molecule groups (index  name  resid_range):")
+        for i, (name, a, b) in enumerate(res_map, 1):
+            print("%-3d %-14s %d:%d" % (i, name, a, b))
+
+        n_groups = len(res_map)
+        thickness = {}
+
+        protein_sel = ask_group_indices(
+            "\nSelect the PROTEIN molecules (shell thickness of 4.15 A)? ", n_groups)
+        for i in protein_sel:
+            thickness[i] = 4.15
+
+        dna_sel = ask_group_indices(
+            "Select the DNA/RNA molecules? (shell thickness of 4.8 A) ", n_groups)
+        for i in dna_sel:
+            thickness[i] = 4.8
+
+        first = True
+        while True:
+            prompt = ("Select the molecules you want to specify shell thickness besides above: "
+                      if first else
+                      "Select the molecules you want to specify except above types: ")
+            sel = ask_group_indices(prompt, n_groups)
+            first = False
+            if not sel:
+                break
+            t = ask_thickness_value("Please specify the shell thickness: ")
+            for i in sel:
+                thickness[i] = t
+
+        shelldef_groups = [(res_map[i - 1][1], res_map[i - 1][2], thickness[i])
+                           for i in sorted(thickness)]
+        if shelldef_groups:
+            write_shelldef(args.shelldefout, shelldef_groups)
+            print("Wrote %s  (%d shell group(s)) -- use with 'parch shellsetup -separateshell "
+                  "yes -shelldef %s'." % (args.shelldefout, len(shelldef_groups), args.shelldefout))
+        else:
+            print("No shell thickness specified for any group; %s was not written."
+                  % args.shelldefout)
+
     # ---- net charge of the kept molecules (from the .tpr charges) ---------- #
     if hasattr(kept, "charges"):
         net_q = float(np.sum(kept.charges))
         print("\nNOTICE: net charge of the kept molecules = %+.2f e  ->  use "
               "'-netcharge %d' in parch shellsetup." % (net_q, round(net_q)))
+        time.sleep(1)
 
     print("\nDone. But check before running parch shellsetup on %s / %s.\n"
           "!! 1. that the kept residues are sequentially numbered\n"
