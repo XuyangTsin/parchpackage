@@ -56,6 +56,7 @@ import MDAnalysis.analysis.distances as Mdistance
 WATER_MODELS = {
     "tip3p": {"solvent": "spc216.gro", "na": "hydrated_na.gro", "cl": "hydrated_cl.gro"},
     "tip4p": {"solvent": "tip4p.gro",  "na": "tip4p_na.gro",    "cl": "tip4p_cl.gro"},
+    "opc": {"solvent": "tip4p.gro",  "na": "tip4p_na.gro",    "cl": "tip4p_cl.gro"},
     "tip5p": {"solvent": "tip5p.gro",  "na": "tip5p_na.gro",    "cl": "tip5p_cl.gro"},
 }
 
@@ -131,14 +132,14 @@ def build_parser():
                    help="Output hydrated structure file name (default: W_init.gro).")
 
     p.add_argument("-dshell", type=float, default=4.15,
-                   help="Uniform water-shell thickness, in angstrom, applied to the whole "
+                   help="Uniform water-shell thickness, in Angstrom, applied to the whole "
                         "solute when -separateshell no (default: 4.15).")
     p.add_argument("-dsi", type=float, default=4.0,
                    help="Min distance between ions and solute surface, nm (default: 4.0).")
     p.add_argument("-dii", type=float, default=3.0,
                    help="Min distance between any two ions, nm (default: 3.0).")
     p.add_argument("-db", type=float, default=3.0,
-                   help="Distance between solute and box boundary, nm (default: 3.0).")
+                   help="Distance between ions and box boundary, nm (default: 3.0).")
 
     p.add_argument("-netcharge", type=int, default=0,
                    help="Net charge of the system; sets the number of counterions (default: 0).")
