@@ -1,9 +1,18 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""parch analysis -- water-shell hydration analysis over the annealing ramp.
+"""parch analysis_old -- water-shell hydration analysis (sample-then-sort trend).
 
-Refactor of ``3_all_water_analysis_PTM.py`` into the parch package, exposed as
-``parch analysis``. Given a completed PARCH workspace::
+The ORIGINAL analysis (refactor of ``3_all_water_analysis_PTM.py``), kept as
+``parch analysis_old``. It is identical to ``parch analysis`` EXCEPT for the
+monotonic dehydration trend (``num_ww_temp``):
+
+  parch analysis_old  (SAMPLE-THEN-SORT): read the 11 temperature frames, then
+                      enforce the non-increasing envelope among only those 11
+                      points. Matches the old PTM/protein scripts.
+  parch analysis      (SORT-THEN-SAMPLE): enforce the envelope over EVERY frame
+                      first, then sample -- the current default.
+
+Given a completed PARCH workspace::
 
     <launch>/
     |- input.gro
@@ -56,8 +65,9 @@ TEMP_POINTS = 11
 # =========================================================================== #
 def build_parser():
     p = argparse.ArgumentParser(
-        prog="parch_analysis",
-        description="Water-shell hydration analysis over the PARCH annealing ramp.",
+        prog="parch_analysis_old",
+        description="Water-shell hydration analysis over the PARCH annealing ramp "
+                    "(sample-then-sort monotonic trend; the original analysis).",
         allow_abbrev=False,
     )
     p.add_argument("-path", dest="path", required=True,
@@ -88,8 +98,8 @@ def build_parser():
 # Helpers
 # =========================================================================== #
 def tag_for(da):
-    """'3-15A' for da=3.15 -- matches the original output naming."""
-    return ("%g" % da).replace(".", "-") + "A"
+    """'3.15A' for da=3.15."""
+    return ("%g" % da) + "A"
 
 
 def _compact(resids):
@@ -428,6 +438,6 @@ def main(argv=None):
 
 if __name__ == "__main__":
     argv = sys.argv[1:]
-    if argv and argv[0] == "analysis":
+    if argv and argv[0] == "analysis_old":
         argv = argv[1:]
     main(argv)
