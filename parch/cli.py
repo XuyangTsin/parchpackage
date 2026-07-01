@@ -11,6 +11,7 @@ import sys
 
 from .shellsetup import main, die
 from .analysis import main as analysis_main
+from .analysis_old import main as analysis_old_main
 from .calpv import main as calpv_main
 from .prep import main as prep_main
 from .submit import main as submit_main
@@ -66,6 +67,18 @@ def cli_analysis(argv=None):
     analysis_main(argv)
 
 
+def cli_analysis_old(argv=None):
+    """Console entry point for ``parch_analysis_old`` (sample-then-sort trend).
+
+    Accepts an optional leading ``analysis_old`` token.
+    """
+    if argv is None:
+        argv = sys.argv[1:]
+    if argv and argv[0] == "analysis_old":
+        argv = argv[1:]
+    analysis_old_main(argv)
+
+
 def cli_calpv(argv=None):
     """Console entry point for ``parch_calpv``.
 
@@ -91,7 +104,8 @@ def cli_parch(argv=None):
               "  prep         Extract selected molecules from an equilibrated system.\n"
               "  shellsetup   Build a hydration shell (+ counterions) for PARCH annealing.\n"
               "  submit       Stage simulation files into mid_* and submit the annealing jobs.\n"
-              "  analysis     Water-shell hydration analysis over the annealing ramp.\n"
+              "  analysis     Water-shell hydration analysis (full-trajectory trend).\n"
+              "  analysis_old Same as analysis but sample-then-sort trend (original).\n"
               "  calpv        PARCH values from analysis results, averaged over mid_* runs.\n\n"
               "Run 'parch <command> -h' for command options.")
         return
@@ -104,10 +118,13 @@ def cli_parch(argv=None):
         submit_main(rest)
     elif cmd == "analysis":
         analysis_main(rest)
+    elif cmd == "analysis_old":
+        analysis_old_main(rest)
     elif cmd in ("calpv", "calval"):
         calpv_main(rest)
     else:
-        die("unknown command %r (available commands: prep, shellsetup, submit, analysis, calpv)" % cmd)
+        die("unknown command %r (available commands: prep, shellsetup, submit, "
+            "analysis, analysis_old, calpv)" % cmd)
 
 
 if __name__ == "__main__":
