@@ -10,7 +10,7 @@
 
 [ moleculetype ]
 ; name	nrexcl
-Cl-	     1
+CL	     1
 
 [ atoms ]
 ; nr	type	resnr	residu	atom	cgnr	charge	mass
