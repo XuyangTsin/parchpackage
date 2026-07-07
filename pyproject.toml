@@ -30,12 +30,6 @@ Repository = "https://github.com/<your-username>/parch"
 
 [project.scripts]
 parch = "parch.cli:cli_parch"
-parch_prep = "parch.cli:cli_prep"
-parch_shell = "parch.cli:cli_shell"
-parch_submit = "parch.cli:cli_submit"
-parch_analysis = "parch.cli:cli_analysis"
-parch_analysis_old = "parch.cli:cli_analysis_old"
-parch_calpv = "parch.cli:cli_calpv"
 
 # The `parch` package ships its data directory (mdp/itp/INP/evp templates) as
 # package data, so a normal `pip install .` includes everything the tools need
