@@ -41,12 +41,21 @@ from .analysis import parse_blocks, build_units, make_refs, ANALYSIS_DIRNAME
 
 # Reference 'hard_ref' per water model + force field (from 4_pv_correlation.py).
 HARD_REF = {
-    "charmm_tip3p":   828602.27,
-    "charmm_tip4p":   834204.55,
-    "charmm_tip4pew": 793704.55,
-    "charmm_tip5p":   886392.05,
-    "amber_opc":      548924.2424,
-    "amber_tip3p":    813643.94,
+    "charmm_tip3p":   557187.5,
+    "charmm_tip4p":   595454.55,
+    "charmm_tip4pew": 568142.05,
+    "charmm_tip5p":   609215.91,
+    "amber_opc":      455075.76,
+    "amber_tip3p":    361196.97,
+    #the old reference values are kept for backward compatibility, 
+    #which used for sort-then-sample in the old analysis,
+    #the new ones above are used by default
+    "charmm_tip3p_old":   828602.27,
+    "charmm_tip4p_old":   834204.55,
+    "charmm_tip4pew_old": 793704.55,
+    "charmm_tip5p_old":   886392.05,
+    "amber_opc_old":      548924.2424,
+    "amber_tip3p_old":    813643.94,
 }
 
 # 11 annealing temperature points (time in ps, temperature in K).
@@ -256,7 +265,7 @@ def main(argv=None):
             colour_pdb(ref_pdb, os.path.join(os.path.dirname(ntw_path),
                        "correlation_pv.pdb"), pv, block_specs)
         pv_runs.append(pv)
-        print("  [%s] pv computed (%d units, mean %.3f)" % (name, len(pv), pv.mean()))
+        print("  [%s] pv computed (%d units)" % (name, len(pv)))
 
     pv_mat = np.vstack(pv_runs)                   # (n_used, n_units)
 
@@ -305,7 +314,6 @@ def main(argv=None):
 
     # ---- report ----------------------------------------------------------- #
     print("\nDone. Averaged PARCH value over %d run(s)  [%s]:" % (n_used, kind))
-    print("  mean pv (over units) : %.3f" % ave.mean())
     print("  per-unit results : %s" % os.path.join(shell_path, pv_file))
     print("  coloured PDB     : %s" % os.path.join(shell_path, pdb_file))
     print("  summary table    : %s" % os.path.join(shell_path, "parch_summary_%s.txt" % tag))
