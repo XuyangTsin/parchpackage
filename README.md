@@ -44,16 +44,17 @@ python -m pip install .          # add -e for an editable/dev install
 The bundled data (`parch/backup_annealing/` — the mdp/itp/INP/evp templates) is
 shipped as package data, so a normal install includes everything the tools need
 at runtime — no editable install required. (Force fields are **not** bundled;
-use your own for the upstream equilibration / topology.) This puts the umbrella
-command `parch` plus per-tool entry points on the environment's `PATH`:
+use your own for the upstream equilibration / topology.) This puts the single
+`parch` umbrella command on the environment's `PATH`:
 
-| Umbrella            | Direct command   | Purpose                                              |
-| ------------------- | ---------------- | --------------------------------------------------- |
-| `parch prep`        | `parch_prep`     | extract selected molecules from an equilibrated system |
-| `parch shellsetup`  | `parch_shell`    | build a hydration shell (+ counterions) and set up the box |
-| `parch submit`      | `parch_submit`   | stage simulation files into `mid_*` and submit jobs |
-| `parch analysis`    | `parch_analysis` | per-residue water-shell hydration over the ramp     |
-| `parch calpv`       | `parch_calpv`    | PARCH values, averaged over `mid_*` runs            |
+| Command             | Purpose                                              |
+| ------------------- | ----------------------------------------------------- |
+| `parch prep`        | extract selected molecules from an equilibrated system |
+| `parch shellsetup`  | build a hydration shell (+ counterions) and set up the box |
+| `parch submit`      | stage simulation files into `mid_*` and submit jobs |
+| `parch analysis`    | per-residue water-shell hydration over the ramp     |
+| `parch calpv`       | PARCH values, averaged over `mid_*` runs            |
+| `parch cval`        | raw correlation values (pre-hard_ref), averaged over `mid_*` runs |
 
 Verify the install:
 
