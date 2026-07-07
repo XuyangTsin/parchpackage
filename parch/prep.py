@@ -428,17 +428,17 @@ def main(argv=None):
         print("\nThe following itp files are in your .top:")
         for n, (_, path) in enumerate(includes, 1):
             print("%-4d  %s" % (n, path))
-        time.sleep(1)
+        time.sleep(1.5)
         print("\n!! Please READ the notice and SELECT the .itp files to KEEP for PARCH (e.g. 1 2 4 5-10):\n"
               "Which should #include the following compents:\n"
               "!!   i.   the total forcefield file (e.g. forcefield.itp)\n"
               "!!   ii.  itps corresponding to molecules you kept (e.g. PROA.itp, PROB.itp, DNAA.itp)\n"
               "!!   iii. the water's itp (e.g. SOL.itp)\n"
               "NOTICE: If you plan to use a DIFFERENT water model than the one used during equilibration, "
-              "DO NOT keep the  water .itp file.\n"
-              "You will need to MANUALLY include the new water .itp AFTER the output .top is generated.\n"
+              "DO NOT keep the water's .itp file.\n"
+              "You will need to MANUALLY include the new water's .itp AFTER the output .top is generated.\n"
               "NOTICE: DO NOT KEEP the .itp files for IONS used during equilibration, As PARCH uses its own tailored ion itp.\n"
-              "NOTICE: Keeping the original ion .itp files may result in duplicate and conflicting topology entries.\n")
+              )
         if args.keep and args.keepff is None:
             print("(keeping all includes; pass -keepff to choose)")
         else:
@@ -491,7 +491,7 @@ def main(argv=None):
     else:
         want_shelldef = ask_yesno(
             "\nWhether you need to define different shell thickness among your molecules "
-            "(e.g. parch shellsetup -separateshell yes)? It will help you prepare the file "
+            "(e.g. parch shellsetup -separateshell yes)? We will help you prepare the file "
             "for -shelldef %s.\nType yes/no: " % args.shelldefout)
 
     if want_shelldef:
@@ -503,20 +503,21 @@ def main(argv=None):
         thickness = {}
 
         protein_sel = ask_group_indices(
-            "\nSelect the PROTEIN molecules (shell thickness of 4.15 A)? ", n_groups)
+            "\nNOTICE: Press Enter without providing any input to make no selection."
+            "\nSelect the PROTEIN molecules (shell thickness of 4.15 A): ", n_groups)
         for i in protein_sel:
             thickness[i] = 4.15
 
         dna_sel = ask_group_indices(
-            "Select the DNA/RNA molecules? (shell thickness of 4.8 A) ", n_groups)
+            "Select the DNA/RNA molecules (shell thickness of 4.80 A): ", n_groups)
         for i in dna_sel:
-            thickness[i] = 4.8
+            thickness[i] = 4.80
 
         first = True
         while True:
-            prompt = ("Select the molecules you want to specify shell thickness besides above: "
+            prompt = ("Any additional molecules you want to specify a shell thickness besides above? (make no selection and press ENTER to skip)"
                       if first else
-                      "Select the molecules you want to specify except above types: ")
+                      "Any other molecule you want to specify? (make no selection and press ENTER to end)")
             sel = ask_group_indices(prompt, n_groups)
             first = False
             if not sel:
@@ -534,13 +535,14 @@ def main(argv=None):
         else:
             print("No shell thickness specified for any group; %s was not written."
                   % args.shelldefout)
+        time.sleep(1.5)
 
     # ---- net charge of the kept molecules (from the .tpr charges) ---------- #
     if hasattr(kept, "charges"):
         net_q = float(np.sum(kept.charges))
-        print("\nNOTICE: net charge of the kept molecules = %+.2f e  ->  use "
+        print("\nNOTICE: !! Net charge of the kept molecules = %+.2f e  ->  use "
               "'-netcharge %d' in parch shellsetup." % (net_q, round(net_q)))
-        time.sleep(1)
+        time.sleep(1.5)
 
     print("\nDone. But check before running parch shellsetup on %s / %s.\n"
           "!! 1. that the kept residues are sequentially numbered\n"
