@@ -483,7 +483,7 @@ sample-then-sort series.
 ### `parch cval` — raw correlation values (pre-`hard_ref`)
 
 Same inputs as `parch calpv` (the `num_ww_temp_<tag>.txt` in each
-`mid_*/analysis/`), but reports each unit's time-correlation integral **as is**,
+`mid_*/analysis/`), but reports each unit's time-correlation integral **AS IS**,
 without dividing by a `hard_ref` — i.e. the value `parch calpv` computes right
 before it scales by `hard_ref` to produce the PARCH value. Because there is no
 normalisation, there is no `-water_ff`/`-newhardref` option.
