@@ -38,4 +38,4 @@ parch = "parch.cli:cli_parch"
 packages = ["parch"]
 
 [tool.setuptools.package-data]
-parch = ["backup_annealing/**"]
+parch = ["backup_annealing/**", "resblocks/**"]

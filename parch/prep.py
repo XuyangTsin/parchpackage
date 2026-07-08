@@ -36,6 +36,11 @@ PACKAGE_DATADIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "back
 ION_ITPS = {"charmm": ["CLA.itp", "SOD.itp"],
             "amber":  ["Cl-_AMBER.itp", "Na+_AMBER.itp"]}
 
+# Block templates for `parch analysis -blocks` (one <moltype>.txt per
+# supported molecule type, e.g. dna.txt, rna.txt). Add a new template file
+# here to support another molecule type -- no code change needed.
+RESBLOCKS_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "resblocks")
+
 
 # =========================================================================== #
 # Selection parsing
@@ -312,6 +317,57 @@ def write_shelldef(path, groups):
             fh.write("%-6.2f%d:%d\n" % (t, a, b))
 
 
+def print_indexed_res_map(res_map):
+    """Print the kept residue groups with a 1-based index, for use in the
+    interactive -shelldef / -blocks prompts below."""
+    print("\nKept molecule groups (index  name  resid_range):")
+    for i, (name, a, b) in enumerate(res_map, 1):
+        print("%-3d %-14s %d:%d" % (i, name, a, b))
+
+
+def list_resblock_templates(dirpath):
+    """Return [(moltype, template_path), ...] for every <moltype>.txt file in
+    the resblocks template directory, sorted by moltype name."""
+    if not os.path.isdir(dirpath):
+        die("resblocks template directory not found: %s" % dirpath)
+    files = sorted(f for f in os.listdir(dirpath) if f.endswith(".txt"))
+    if not files:
+        die("no molecule-type templates (*.txt) found in %s" % dirpath)
+    return [(os.path.splitext(f)[0], os.path.join(dirpath, f)) for f in files]
+
+
+def parse_resblock_template(path):
+    """Parse a resblocks/<moltype>.txt template into [(block_name, atoms), ...].
+
+    Each non-comment line is 'placeholder_range block_name atom1 atom2 ...';
+    the template's own placeholder range is discarded here -- the actual
+    residue range of the molecule the template is applied to is substituted
+    in by the caller."""
+    specs = []
+    with open(path) as fh:
+        for lineno, raw in enumerate(fh, 1):
+            line = raw.split("#", 1)[0].strip()
+            if not line:
+                continue
+            toks = line.split()
+            if len(toks) < 3:
+                die("resblocks template %s line %d: expected 'resid_range block_name "
+                    "atom...', got %r" % (path, lineno, raw.strip()))
+            specs.append((toks[1], toks[2:]))
+    if not specs:
+        die("resblocks template %s contains no block definitions." % path)
+    return specs
+
+
+def write_blocks(path, entries):
+    """Write a parch analysis -blocks file: entries is
+    [(start, end, block_name, atoms), ...]."""
+    with open(path, "w") as fh:
+        fh.write("# resid_range  block_name  atom_names\n")
+        for a, b, name, atoms in entries:
+            fh.write("%d:%d %-12s %s\n" % (a, b, name, " ".join(atoms)))
+
+
 # =========================================================================== #
 # Argument parsing
 # =========================================================================== #
@@ -343,6 +399,15 @@ def build_parser():
     p.add_argument("-shelldefout", default="shelldef.txt",
                    help="Output shell-definition file written when -separateshell yes "
                         "(default: %(default)s).")
+    p.add_argument("-makeblocks", choices=["yes", "no"],
+                   help="Whether to interactively build a parch analysis -blocks file "
+                        "from the resblocks/ molecule-type templates. If omitted, you are prompted.")
+    p.add_argument("-blocksout", default="blocks.txt",
+                   help="Output block-mapping file written when -makeblocks yes "
+                        "(default: %(default)s).")
+    p.add_argument("-resblocksdir", default=RESBLOCKS_DIR,
+                   help="Directory holding block templates, one <moltype>.txt file per "
+                        "supported molecule type (e.g. dna.txt, rna.txt). Default: %(default)s")
     return p
 
 
@@ -492,12 +557,10 @@ def main(argv=None):
         want_shelldef = ask_yesno(
             "\nWhether you need to define different shell thickness among your molecules "
             "(e.g. parch shellsetup -separateshell yes)? We will help you prepare the file "
-            "for -shelldef %s.\nType yes/no: " % args.shelldefout)
+            "for -shelldef %s.\nType yes / no: " % args.shelldefout)
 
     if want_shelldef:
-        print("\nKept molecule groups (index  name  resid_range):")
-        for i, (name, a, b) in enumerate(res_map, 1):
-            print("%-3d %-14s %d:%d" % (i, name, a, b))
+        print_indexed_res_map(res_map)
 
         n_groups = len(res_map)
         thickness = {}
@@ -537,16 +600,50 @@ def main(argv=None):
                   % args.shelldefout)
         time.sleep(1.5)
 
+    # ---- optional: build a parch analysis -blocks file ---------------------- #
+    if args.makeblocks is not None:
+        want_blocks = args.makeblocks == "yes"
+    else:
+        want_blocks = ask_yesno(
+            "\nDo you need to prepare a %s file for your molecule(s)/residue(s) "
+            "(e.g., DNA/RNA) for PARCH analysis?\nType yes / no: " % args.blocksout)
+
+    if want_blocks:
+        templates = list_resblock_templates(args.resblocksdir)
+        print_indexed_res_map(res_map)
+
+        n_groups = len(res_map)
+        blocks_entries = []
+        for moltype, tpl_path in templates:
+            spec = parse_resblock_template(tpl_path)
+            sel = ask_group_indices(
+                "\nPlease select the ones for applying %s blocks: "
+                "\nNOTICE: Press Enter without providing any input to make no selection." % moltype.upper(), n_groups)
+            for i in sel:
+                a, b = res_map[i - 1][1], res_map[i - 1][2]
+                for name, atoms in spec:
+                    blocks_entries.append((a, b, name, atoms))
+
+        if blocks_entries:
+            write_blocks(args.blocksout, blocks_entries)
+            print("Wrote %s  (%d block definition(s)) -- use with 'parch analysis -blocks %s'."
+                  % (args.blocksout, len(blocks_entries), args.blocksout))
+        else:
+            print("No molecules selected for block definitions; %s was not written."
+                  % args.blocksout)
+        time.sleep(1.5)
+
     # ---- net charge of the kept molecules (from the .tpr charges) ---------- #
     if hasattr(kept, "charges"):
         net_q = float(np.sum(kept.charges))
-        print("\nNOTICE: !! Net charge of the kept molecules = %+.2f e  ->  use "
+        print("\n!! Net charge of the kept molecules = %+.2f e  ->  use "
               "'-netcharge %d' in parch shellsetup." % (net_q, round(net_q)))
         time.sleep(1.5)
 
     print("\nDone. But check before running parch shellsetup on %s / %s.\n"
           "!! 1. that the kept residues are sequentially numbered\n"
-          "!! 2. visually, the moelculs should be centered in the box, and unbroken\n" % (args.out_gro, args.out_top))
+          "!! 2. visually, the moelculs should be centered in the box, and unbroken\n"
+          "!! 3. the shedef.txt and blocks.txt files are correct for your system.\n" % (args.out_gro, args.out_top))
 
 
 if __name__ == "__main__":
