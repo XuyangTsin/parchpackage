@@ -10,6 +10,11 @@ The full pipeline is five commands:
 parch prep  ->  parch shellsetup  ->  parch submit  ->  parch analysis  ->  parch calpv
 ```
 
+Two auxiliary commands share the same inputs/outputs as their counterparts and
+are documented at the end: `parch analysis_old` (the original sample-then-sort
+hydration trend) and `parch cval` (raw correlation integrals, before the
+`hard_ref` normalisation that turns them into PARCH values).
+
 ## Installation
 
 ### Prerequisites
@@ -49,12 +54,13 @@ use your own for the upstream equilibration / topology.) This puts the single
 
 | Command             | Purpose                                              |
 | ------------------- | ----------------------------------------------------- |
-| `parch prep`        | extract selected molecules from an equilibrated system |
+| `parch prep`        | extract selected molecules from an equilibrated system, and prepare files |
 | `parch shellsetup`  | build a hydration shell (+ counterions) and set up the box |
 | `parch submit`      | stage simulation files into `mid_*` and submit jobs |
-| `parch analysis`    | per-residue water-shell hydration over the ramp     |
-| `parch calpv`       | PARCH values, averaged over `mid_*` runs            |
-| `parch cval`        | raw correlation values (pre-hard_ref), averaged over `mid_*` runs |
+| `parch analysis`    | analyse the per-residue water rentation over the annealing     |
+| `parch calpv`       | calculate PARCH values per-residue or per-block, averaged over `mid_*` runs            |
+| `parch analysis_old`| same as `analysis` but the original sample-then-sort dehydration trend (auxiliary) |
+| `parch cval`        | raw integrated correlation values (pre-hard_ref), averaged over `mid_*` runs (auxiliary) |
 
 Verify the install:
 
@@ -101,6 +107,17 @@ type / chain, choose which to keep, and write a trimmed structure + topology
 ready for `shellsetup`. The molecule→atom mapping comes from the `.tpr`; the
 coordinates come from the `.gro`.
 
+In addition to trimming the structure/topology, `prep` now also:
+
+- **makes the kept molecules whole across the periodic boundary and centres them
+  in the box** (using bonds from the `.tpr`), so the solute is never split when
+  `shellsetup` carves the shell — no manual `gmx trjconv -pbc` step needed;
+- lets you pick the **counter-ion force field** (`-ionff charmm|amber`) so the
+  correct PARCH ion `.itp` files are included;
+- can **interactively build the `shellsetup -shelldef` file** (per-molecule shell
+  thicknesses) and the **`analysis -blocks` file** (e.g. DNA/RNA sugar/base
+  splits) for you, using the renumbered residue ranges it just produced.
+
 **IMPORTANT:** Before running the `setup` command, ensure that **all heavy atoms** of the 
 molecules you want to run with PARCH have position restraints defined in their 
 corresponding `.itp` files. 
@@ -141,7 +158,7 @@ parch prep -f md.gro -s md.tpr -pi topol.top -o solute.gro -po solute.top
 First, it prints a numbered table of molecules and asks which to KEEP (keyboard, e.g. 1 2 4 5-10),
 
 ```
-#group  molecule        number   atoms
+#group  molecule        num_mol  atoms
 1       PROA            1        1418
 2       HEME            1        73
 3       SOD             88       88
@@ -149,11 +166,15 @@ First, it prints a numbered table of molecules and asks which to KEEP (keyboard,
 5       TIP3            27337    82011
 ```
 
+(It first prints a reminder **not** to keep the waters or equilibration ions
+here — e.g. `SOL`, `TP3`, `OPC`, `NA`, `CL`, `K`, `CA` — since `shellsetup`
+rebuilds the solvent shell and PARCH ships its own ion topologies.)
+
 **IMPORTANT**: After selecting, it modifies the `.top` file, and reports the renumbered 
 residue ranges (Consecutive, and starting from 1) in the output (useful for if you want to use `-shelldef` later):
 
 ```
-Output residue ranges (renumbered) -- useful for -separateshell / -shelldef:
+NOTICE: Output residue ranges (renumbered) -- useful for -separateshell or -shelldef:
     PROA           1:90
     HEME           91:91
 ```
@@ -180,7 +201,11 @@ in the `.top`, to avoid additional copying and moving the files:
 #include "/home/xqin10/parch_platform/test_shellsetup/uniform/toppar/PROA.itp"
 #include "/home/xqin10/parch_platform/backup_eqb/charmm36-jul2021.ff/tip3p.itp"
 ```
-Additionally, the tailored `.itp` of ions are automatically included.
+Additionally, PARCH's own tailored counter-ion `.itp` files are appended
+automatically. Which ones depends on the counter-ion force field: `prep` asks
+`Which forcefield are you using? (charmm/amber)` (or take it from `-ionff`).
+For CHARMM it adds `CLA.itp` + `SOD.itp`; for AMBER it adds
+`Cl-_AMBER.itp` + `Na+_AMBER.itp`:
 ```
 ; PARCH counter-ion topologies
 #include "/home/xqin10/parch_platform/parch_package/backup_annealing/CLA.itp"
@@ -189,6 +214,32 @@ Additionally, the tailored `.itp` of ions are automatically included.
 
 **IMPORTANT**: The net charge of the retained molecules will be reported at the end. This 
 value should be provided to the `shellsetup` to properly place counterions.
+
+### Building `-shelldef` / `-blocks` interactively
+
+After writing the topology, `prep` offers to generate the two helper files that
+`shellsetup` and `analysis` consume, using the renumbered residue ranges it
+just printed (so the ranges are guaranteed to line up):
+
+- **`-shelldef` file** (prompted, or forced with `-separateshell yes|no`): it
+  lists the kept molecule groups, asks which are protein (auto **4.15 Å**) and
+  which are DNA/RNA (auto **4.80 Å**), then lets you add any number of extra
+  groups with a custom thickness. The result is written to `-shelldefout`
+  (default `shelldef.txt`) for use with `parch shellsetup -separateshell yes
+  -shelldef shelldef.txt`.
+- **`-blocks` file** (prompted, or forced with `-makeblocks yes|no`): for each
+  molecule-type template found in `-resblocksdir` (e.g. `dna.txt`, `rna.txt`),
+  it asks which kept groups it applies to and expands the template's block/atom
+  definitions onto those residue ranges. The result is written to `-blocksout`
+  (default `blocks.txt`) for use with `parch analysis -blocks blocks.txt`.
+
+Both steps are optional — press Enter to skip a selection — and are skipped
+entirely if you answer `no`. When run non-interactively, pass `-separateshell` /
+`-makeblocks` (and, if needed, `-ionff`) so `prep` never blocks on a prompt.
+
+Finally, `prep` prints a short checklist to verify before `shellsetup`: kept
+residues are sequentially numbered, molecules are centred and unbroken in the
+box, and any `shelldef.txt`/`blocks.txt` are correct.
 
 | Option       | Meaning                                                                 |
 | ------------ | ----------------------------------------------------------------------- |
@@ -201,6 +252,12 @@ value should be provided to the `shellsetup` to properly place counterions.
 |                 `no` keeps original ids, the structure will not work well for shell setup |
 | `-keep`      | non-interactive selection, e.g. `"1 2 4"` or `"1-3,5"`                     |
 | `-keepff`    | non-interactive `#include` selection (default with `-keep`: keep all)      |
+| `-ionff`     | counter-ion force field for the added PARCH ion `.itp`s: `charmm` (CLA/SOD) or `amber` (Cl-/Na+); prompted if omitted |
+| `-separateshell` | `yes`/`no` — whether to interactively build a `-shelldef` file; prompted if omitted |
+| `-shelldefout`   | output shell-definition file written when `-separateshell yes` (default `shelldef.txt`) |
+| `-makeblocks`    | `yes`/`no` — whether to interactively build an `analysis -blocks` file; prompted if omitted |
+| `-blocksout`     | output block-mapping file written when `-makeblocks yes` (default `blocks.txt`) |
+| `-resblocksdir`  | directory of block templates, one `<moltype>.txt` per type (default: bundled `resblocks/`) |
 
 ---
 
@@ -324,7 +381,7 @@ parch analysis -path shell -separateshell yes -shelldef shelldef_analysis.txt
 **`-shelldef shelldef_analysis.txt`** the format is consistent with the one used for setup. However,
 the shell cutoff for analysis can be **different than setup**.
 
-**Shell cutoff for setup:**
+**Shell cutoff for analysis:**
 For protein: 3.15 Å.
 For DNA and RNA: 4.80 Å
 
@@ -355,15 +412,32 @@ parch calpv -path shell -water_ff charmm_tip3p -nmids 5 -mean_without_min_max ye
 | Option                  | Meaning                                                       |
 | ----------------------- | ------------------------------------------------------------- |
 | `-path`                 | the `shell/` directory with analysed `mid_*` runs            |
-| `-water_ff`             | selects `hard_ref` (default `charmm&tip3p`)                   |
+| `-water_ff`             | selects `hard_ref` (default `charmm_tip3p`)                   |
 | `-newhardref`           | user `hard_ref` value, overrides `-water_ff`                  |
 | `-nmids`                | number of runs to include (integer ≥ 3; default 5)           |
 | `-mean_without_min_max` | `yes` (default) trims lowest+highest run per unit; auto-disabled when < 5 runs |
 | `-blocks`               | block-mapping file (only needed to colour the output PDBs per sub-unit) |
 
-Supported `-water_ff` values: `charmm_tip3p` (828602.27), `charmm_tip4p`
-(834204.55), `charmm_tip4pew` (793704.55), `charmm_tip5p` (886392.05),
-`amber_opc` (548924.2424), `amber_tip3p` (813643.94).
+**`hard_ref` values (recalibrated).** The default `hard_ref` for each water
+model/force field was **re-derived for the current `parch analysis`** (the
+full-trajectory *sort-then-sample* trend) and is the value used by default:
+
+| `-water_ff`     | `hard_ref` (default) |
+| --------------- | -------------------- |
+| `charmm_tip3p`  | 557187.5             |
+| `charmm_tip4p`  | 595454.55            |
+| `charmm_tip4pew`| 568142.05            |
+| `charmm_tip5p`  | 609215.91            |
+| `amber_opc`     | 455075.76            |
+| `amber_tip3p`   | 361196.97            |
+
+The original references are **kept for backward compatibility** under an `_old`
+suffix (`charmm_tip3p_old` = 828602.27, `charmm_tip4p_old` = 834204.55,
+`charmm_tip4pew_old` = 793704.55, `charmm_tip5p_old` = 886392.05,
+`amber_opc_old` = 548924.2424, `amber_tip3p_old` = 813643.94). Use the `_old`
+value **only** when your dehydration trend came from `parch analysis_old`
+(sample-then-sort), so the reference matches how the series was built. For any
+other reference, pass `-newhardref <value>` (overrides `-water_ff`).
 
 Outputs under `shell/` (the two averaged flavours are mutually exclusive):
 
@@ -379,10 +453,66 @@ PARCH value from each run, and the across-run average and std.
 
 ---
 
+## Auxiliary commands
+
+These two are variants of the pipeline steps above; most users never need them.
+
+### `parch analysis_old` — original (sample-then-sort) hydration trend
+
+Drop-in alternative to `parch analysis` with the **same options** (`-path`,
+`-da`, `-separateshell`, `-shelldef`, `-newwater`, `-blocks`, `-overwrite`) and
+the same outputs. The only difference is how the monotonic dehydration trend
+(`num_ww_temp`) is built:
+
+- `parch analysis_old` (**sample-then-sort**): read the 11 temperature frames,
+  then enforce the non-increasing envelope among *only* those 11 points. This
+  matches the original PTM/protein scripts (`3_all_water_analysis_PTM.py`).
+- `parch analysis` (**sort-then-sample**): enforce the non-increasing envelope
+  over *every* frame first, then sample the 11 points — the current default.
+
+```bash
+parch analysis_old -path shell -da 3.15 -separateshell no
+```
+
+Use it only to reproduce results generated with the pre-refactor scripts;
+`parch analysis` is preferred for new work. When you feed an `analysis_old`
+trend into `parch calpv`, pair it with an `_old` `hard_ref`
+(e.g. `-water_ff charmm_tip3p_old`) so the reference matches the
+sample-then-sort series.
+
+### `parch cval` — raw correlation values (pre-`hard_ref`)
+
+Same inputs as `parch calpv` (the `num_ww_temp_<tag>.txt` in each
+`mid_*/analysis/`), but reports each unit's time-correlation integral **as is**,
+without dividing by a `hard_ref` — i.e. the value `parch calpv` computes right
+before it scales by `hard_ref` to produce the PARCH value. Because there is no
+normalisation, there is no `-water_ff`/`-newhardref` option.
+
+```bash
+parch cval -path shell -nmids 5 -mean_without_min_max yes
+```
+
+| Option                  | Meaning                                                       |
+| ----------------------- | ------------------------------------------------------------- |
+| `-path`                 | the `shell/` directory with analysed `mid_*` runs            |
+| `-nmids`                | number of runs to include (integer ≥ 3; default 5)           |
+| `-mean_without_min_max` | `yes` (default) trims lowest+highest run per unit; auto-disabled when < 5 runs |
+
+Outputs under `shell/` mirror `calpv` with a `cval` prefix (the two averaged
+flavours are mutually exclusive):
+
+| `-mean_without_min_max` | files written                                             |
+| ----------------------- | -------------------------------------------------------- |
+| `no`                    | `ave_cval_<tag>.txt`, `std_cval_<tag>.txt`               |
+| `yes`                   | `ave_excl_cval_<tag>.txt`, `std_excl_cval_<tag>.txt`     |
+| (always)                | `cval_summary_<tag>.txt` + per-run `mid_*/analysis/cval_<tag>.txt` |
+
+---
+
 ## Notes
 
 - Run any command with `-h` for the full option list.
-- `prep`/`analysis`/`calpv` need only MDAnalysis; `shellsetup` also needs `gmx`;
-  `submit` needs SLURM (`sbatch`).
+- `prep`/`analysis`/`analysis_old`/`calpv`/`cval` need only MDAnalysis;
+  `shellsetup` also needs `gmx`; `submit` needs SLURM (`sbatch`).
 - The `-shelldef` format is identical across `shellsetup`, `analysis` and (for
   `prep`) the residue ranges it prints, so the same file/ranges carry through.
