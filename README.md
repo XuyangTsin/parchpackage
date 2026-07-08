@@ -343,8 +343,8 @@ parch submit -path shell -nmids 3 -partition gpu -launch no
 
 Each `mid_i` uses its own annealing protocol (`heat_nvt_<i>.mdp`) and job script
 (`evp_<i>_zest3.sh` / `evp_<i>_gpu.sh`). **Edit the `#SBATCH` lines in those
-`mid_*/evp_<i>_*.sh` scripts to change your job requests** (partition, nodes,
-walltime, …). Runs that are already finished (`w_h.gro` present) or not yet set
+`mid_*/evp_<i>_*.sh` or under bundled `backup_annealing/` to change your job requests
+** (partition, nodes, walltime, …). Runs that are already finished (`w_h.gro` present) or not yet set
 up (`W_init.gro` missing) are skipped. The protocol/job templates ship for
 indices 1–5, so this supports up to 5 `mid_*` runs.
 
