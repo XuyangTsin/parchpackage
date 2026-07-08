@@ -35,13 +35,13 @@ Install straight from the repository into the Python environment where you want
 the `parch` commands to live:
 
 ```bash
-python -m pip install git+https://github.com/<your-username>/parch.git
+python -m pip install git+https://github.com/XuyangTsin/parchpackage.git
 ```
 
 or from a local clone:
 
 ```bash
-git clone https://github.com/<your-username>/parch.git
+git clone https://github.com/XuyangTsin/parchpackage.git
 cd parch
 python -m pip install .          # add -e for an editable/dev install
 ```
