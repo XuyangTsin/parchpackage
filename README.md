@@ -223,7 +223,7 @@ just printed (so the ranges are guaranteed to line up):
 
 - **`-shelldef` file** (prompted, or forced with `-separateshell yes|no`): it
   lists the kept molecule groups, asks which are protein (auto **4.15 Å**) and
-  which are DNA/RNA (auto **4.80 Å**), then lets you add any number of extra
+  which are DNA/RNA (auto **4.50 Å**), then lets you add any number of extra
   groups with a custom thickness. The result is written to `-shelldefout`
   (default `shelldef.txt`) for use with `parch shellsetup -separateshell yes
   -shelldef shelldef.txt`.
@@ -292,7 +292,7 @@ parch shellsetup \
 
 **Shell thickness for setup:**
 For protein: 4.15 Å.
-For DNA and RNA: 4.80 Å
+For DNA and RNA: 4.50 Å
 
 
 Validation (separateshell): the file must exist, ranges must be valid, must not
@@ -383,7 +383,7 @@ the shell cutoff for analysis can be **different than setup**.
 
 **Shell cutoff for analysis:**
 For protein: 3.15 Å.
-For DNA and RNA: 4.80 Å
+For DNA and RNA: 4.50 Å
 
 **`-blocks blocks.txt`** file — split chosen residues into named atom sub-units (one or
 more lines per residue range; whitespace-separated, no commas):
