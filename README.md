@@ -185,7 +185,7 @@ here — e.g. `SOL`, `TP3`, `OPC`, `NA`, `CL`, `K`, `CA` — since `shellsetup`
 rebuilds the solvent shell and PARCH ships its own ion topologies.)
 
 **IMPORTANT**: After selecting, it modifies the `.top` file, and reports the renumbered 
-residue ranges (Consecutive, and starting from 1) in the output (useful for if you want to use `-shelldef` later):
+residue ranges (Consecutive, and starting from 1) in the output (can be used for `-shelldef` later):
 
 ```
 NOTICE: Output residue ranges (renumbered) -- useful for -separateshell or -shelldef:
@@ -194,8 +194,10 @@ NOTICE: Output residue ranges (renumbered) -- useful for -separateshell or -shel
 ```
 
 Then, it prints `#include` (force-field) lines, and asks which to keep (keyboard).
-DO NOT KEEP the `.itp` files for IONS used during equilibration, as PARCH uses its own tailored ones.
+
+**DO NOT KEEP** the `.itp` files for IONS used during equilibration, as PARCH uses its own tailored ones.
 Keeping the original ion `.itp` files may result in conflicting topology entries.
+
 If you plan to use a DIFFERENT water model than the one used during equilibration, DO NOT keep the water's `.itp` file.
 ```
 The following itp files are in your .top:
