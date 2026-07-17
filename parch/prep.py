@@ -309,7 +309,7 @@ def write_shelldef(path, groups):
     (start, end, thickness) group, e.g.:
         # shell_thickness, resid range
         4.15  1:298
-        4.80  401:450
+        4.50  401:450
     """
     with open(path, "w") as fh:
         fh.write("# shell_thickness, resid range\n")
@@ -339,10 +339,10 @@ def list_resblock_templates(dirpath):
 def parse_resblock_template(path):
     """Parse a resblocks/<moltype>.txt template into [(block_name, atoms), ...].
 
-    Each non-comment line is 'placeholder_range block_name atom1 atom2 ...';
-    the template's own placeholder range is discarded here -- the actual
-    residue range of the molecule the template is applied to is substituted
-    in by the caller."""
+    Each non-comment line is 'a:b block_name atom1 atom2 ...', where 'a:b' is
+    a literal placeholder for the residue range -- it is discarded here, and
+    the actual residue range of the molecule the template is applied to is
+    substituted in by the caller."""
     specs = []
     with open(path) as fh:
         for lineno, raw in enumerate(fh, 1):
@@ -572,9 +572,9 @@ def main(argv=None):
             thickness[i] = 4.15
 
         dna_sel = ask_group_indices(
-            "Select the DNA/RNA molecules (shell thickness of 4.80 A): ", n_groups)
+            "Select the DNA/RNA molecules (shell thickness of 4.50 A): ", n_groups)
         for i in dna_sel:
-            thickness[i] = 4.80
+            thickness[i] = 4.50
 
         first = True
         while True:
