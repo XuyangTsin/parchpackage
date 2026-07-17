@@ -10,6 +10,12 @@ The full pipeline is five commands:
 parch prep  ->  parch shellsetup  ->  parch submit  ->  parch analysis  ->  parch calpv
 ```
 
+For a whole lipid membrane, swap `parch shellsetup` for **`parch membshell`**
+(section 2b): same shell-carving idea, but it builds a non-cubic box that keeps
+the membrane's periodic XY size, lays counterions in planes above and below the
+slab rather than on a sphere, and can delete the waters that solvation buries
+inside the membrane core. The rest of the pipeline is unchanged.
+
 Two auxiliary commands share the same inputs/outputs as their counterparts and
 are documented at the end: `parch analysis_old` (the original sample-then-sort
 hydration trend) and `parch cval` (raw correlation integrals, before the
@@ -23,7 +29,7 @@ hydration trend) and `parch cval` (raw correlation integrals, before the
 | ----------- | ---------- | ----- |
 | Python ≥ 3.8 with `pip` | everything | a conda env is recommended |
 | `numpy`, `MDAnalysis ≥ 2.0` | everything | installed automatically by `pip` |
-| **GROMACS** (`gmx`) | `shellsetup`, and running the annealing | external; not installable via pip. Put it on `PATH` (e.g. `source /path/to/gromacs/bin/GMXRC`) |
+| **GROMACS** (`gmx`) | `shellsetup`, `membshell`, and running the annealing | external; not installable via pip. Put it on `PATH` (e.g. `source /path/to/gromacs/bin/GMXRC`) |
 | **SLURM** (`sbatch`) | `submit` only | external; only needed to launch annealing jobs on a cluster |
 
 `prep`, `analysis` and `calpv` are pure Python/MDAnalysis and need neither
@@ -46,9 +52,10 @@ cd parch
 python -m pip install .          # add -e for an editable/dev install
 ```
 
-The bundled data (`parch/backup_annealing/` — the mdp/itp/INP/evp templates) is
-shipped as package data, so a normal install includes everything the tools need
-at runtime — no editable install required. (Force fields are **not** bundled;
+The bundled data (`parch/backup_annealing/` — the mdp/itp/INP/evp templates —
+and `parch/resblocks/` — the `-blocks` molecule-type templates) is shipped as
+package data, so a normal install includes everything the tools need at
+runtime — no editable install required. (Force fields are **not** bundled;
 use your own for the upstream equilibration / topology.) This puts the single
 `parch` umbrella command on the environment's `PATH`:
 
@@ -56,6 +63,7 @@ use your own for the upstream equilibration / topology.) This puts the single
 | ------------------- | ----------------------------------------------------- |
 | `parch prep`        | extract selected molecules from an equilibrated system, and prepare files |
 | `parch shellsetup`  | build a hydration shell (+ counterions) and set up the box |
+| `parch membshell`   | shellsetup for a whole lipid membrane: planar ion layers, non-cubic box, intra-core water removal |
 | `parch submit`      | stage simulation files into `mid_*` and submit jobs |
 | `parch analysis`    | analyse the per-residue water rentation over the annealing     |
 | `parch calpv`       | calculate PARCH values per-residue or per-block, averaged over `mid_*` runs            |
@@ -90,9 +98,10 @@ scripts; each just needs `gmx grompp`/`mdrun` on `W_init.gro`, `W_topol.top`,
 ### Layout
 
 `parch/` is a proper Python package; its modules
-(`prep`, `shellsetup`, `submit`, `analysis`, `calpv`, `cli`) and the
-`backup_annealing/` data directory are installed together, so the tools find
-their templates relative to the installed package on any machine.
+(`prep`, `shellsetup`, `submit`, `analysis`, `calpv`, `cli`) and its
+`backup_annealing/` and `resblocks/` data directories are installed together,
+so the tools find their templates relative to the installed package on any
+machine.
 
 ---
 
@@ -228,8 +237,9 @@ just printed (so the ranges are guaranteed to line up):
   (default `shelldef.txt`) for use with `parch shellsetup -separateshell yes
   -shelldef shelldef.txt`.
 - **`-blocks` file** (prompted, or forced with `-makeblocks yes|no`): for each
-  molecule-type template found in `-resblocksdir` (e.g. `dna.txt`, `rna.txt`),
-  it asks which kept groups it applies to and expands the template's block/atom
+  molecule-type template found in `-resblocksdir` (bundled: `dna.txt`, `rna.txt`,
+  `meth_dna.txt` — add more by dropping in another `<moltype>.txt`), it asks
+  which kept groups it applies to and expands the template's block/atom
   definitions onto those residue ranges. The result is written to `-blocksout`
   (default `blocks.txt`) for use with `parch analysis -blocks blocks.txt`.
 
@@ -317,6 +327,108 @@ into independent run directories `shell/mid_1` … `shell/mid_N`.
 
 Auxiliary files (hydrated-ion `.gro`, INP make_ndx templates) come from
 `-datadir` (default: `../backup_annealing`).
+
+---
+
+## 2b. `parch membshell` — build the hydration shell for a whole membrane
+
+The membrane counterpart of `shellsetup`. Use it when the "solute" is an entire
+lipid bilayer (optionally with an embedded membrane protein) instead of a
+globular molecule. The input should be **membrane-only** (lipids/protein, no
+water or ions — e.g. straight from `prep`) and must still carry its
+**equilibrated box vectors**, because `membshell` keeps the periodic XY size.
+
+It shares every argument with `shellsetup` (`-f`/`-p`/`-o`, `-dshell`,
+`-separateshell`/`-shelldef`, `-netcharge`, `-nmids`, `-water`, `-watername`,
+`-datadir`) and differs only in how the box, the counterions, and the interior
+water are handled:
+
+```bash
+# neutral membrane, remove waters buried in the core
+parch membshell -f membrane.gro -p membrane.top -o W_init.gro \
+    -dshell 4.15 -delewater glycerol.txt -netcharge 0
+
+# charged membrane needing many counterions: stack more ion planes
+parch membshell -f membrane.gro -p membrane.top -o W_init.gro \
+    -delewater glycerol.txt -netcharge -271 -ionplanes 6
+```
+
+Like `shellsetup`, it solvates and carves a `-dshell` shell around the lipids,
+writes everything to a `shell/` subdirectory, and copies the key outputs
+(`-o`, `W_topol.top`, `W_ind.ndx`) into `shell/mid_1 … mid_N`. Solvation is done
+in the input's own equilibrated box, so only a physical amount of water is added
+before the shell is carved.
+
+**Non-cubic box.** Membrane boxes are elongated along the normal (Z) and keep
+their periodic lateral (XY) size, so the box is set independently:
+
+- `-dbxy` pads XY: `box_xy = membrane_xy + 2*dbxy`. Use `0` (default) to keep the
+  input's periodic XY dimensions exactly.
+- `-dbz` is the gap from the **outermost ion plane** to the box wall in Z. The
+  full height follows from the ion-plane layout:
+  `box_z = 2 * (dbz + (ionplanes/2 - 1)*dii + dsi)`, with the system centred.
+  This is measured from the system centre, so an embedded protein that protrudes
+  past the bilayer faces does **not** inflate the box.
+
+**Planar counterions.** Instead of scattering ions on a sphere, `membshell`
+places them in flat layers above and below the membrane:
+
+- `-dsi` is the distance from the system's **Z centre** to the innermost ion
+  plane (must exceed the membrane/protein half-thickness, or the ions would land
+  inside it).
+- `-ionplanes` (even: `2`, `4`, `6`, `8`; default `2`) sets how many layers,
+  split evenly above/below. Each side stacks `ionplanes/2` planes outward from
+  `centre ± dsi`, spaced `-dii` apart in Z. Ions within a plane are laid on a
+  hexagonal lattice opened up to spread them over the whole footprint, always at
+  least `-dii` apart; ions in different planes are `-dii` apart by construction.
+- `-dii` is the minimum in-plane ion–ion distance (nm; default 3.0).
+
+If a plane cannot hold all the counterions at the requested `-dii`, `membshell`
+fails **immediately** (before solvating) with the exact `-ionplanes` value that
+would fit — e.g. a heavily charged membrane needing 271 ions cannot fit them in
+2 planes at `-dii 3.0` and is told to use `-ionplanes 6`.
+
+**Removing water from the membrane core (`-delewater`).** Solvation fills the
+whole box, including the hydrophobic interior, which must be emptied. `-delewater`
+takes a file of **leaflet reference atoms** whose mean Z marks the bilayer
+mid-plane; the mean Z of the atoms above / below it defines the upper and lower
+head-group planes, and every water between those two planes is deleted. The file
+is either a bare atom-name list or a full MDAnalysis selection:
+
+```text
+# glycerol.txt — a full selection (used verbatim when it contains selection keywords)
+resname POPC POPE POPS DOPA PIPI and name C1 C2 C3
+```
+
+```text
+# a bare atom-name list is also accepted (becomes "name P")
+P
+```
+
+Use a full `resname ... and name ...` selection when the reference atom names are
+ambiguous across residues — e.g. glycerol carbons `C1 C2 C3` also exist (as ring
+carbons) in cholesterol and glycolipids, so restrict the selection to the
+glycerophospholipids. Omit `-delewater` to keep all shell water.
+
+| Option              | Meaning                                                          |
+| ------------------- | ---------------------------------------------------------------- |
+| `-f` / `-p` / `-o`  | input membrane structure / topology / output structure name      |
+| `-dshell`           | uniform shell thickness (Å) when `-separateshell no` (default 4.15) |
+| `-separateshell` / `-shelldef` | uniform vs per-group shell thickness (as in `shellsetup`) |
+| `-netcharge`        | system net charge; sets the number of counterions                |
+| `-ionplanes`        | number of ion planes, even `2`/`4`/`6`/`8` (default 2)           |
+| `-dsi`              | Z-centre → innermost ion plane distance (nm; default 4.0)        |
+| `-dii`              | minimum in-plane ion–ion distance (nm; default 3.0)             |
+| `-dbxy`             | XY padding: `box_xy = membrane_xy + 2*dbxy` (nm; default 0.0)    |
+| `-dbz`              | outermost ion plane → box wall gap in Z (nm; default 2.0)        |
+| `-delewater`        | leaflet-reference file; deletes waters inside the membrane core   |
+| `-nmids`            | number of `mid_*` run dirs (integer ≥ 3; default 5)             |
+| `-water` / `-watername` | water model / `[ molecules ]` water name                    |
+| `-datadir`          | auxiliary files (hydrated-ion `.gro`, INP templates)             |
+
+> **Note.** `-delewater` uses only the Z coordinate, so for a membrane protein
+> with a water-filled pore it will also delete the pore/channel water. Leave
+> `-delewater` off (or restore the pore water afterwards) for channel systems.
 
 ---
 
@@ -513,6 +625,6 @@ flavours are mutually exclusive):
 
 - Run any command with `-h` for the full option list.
 - `prep`/`analysis`/`analysis_old`/`calpv`/`cval` need only MDAnalysis;
-  `shellsetup` also needs `gmx`; `submit` needs SLURM (`sbatch`).
+  `shellsetup` and `membshell` also need `gmx`; `submit` needs SLURM (`sbatch`).
 - The `-shelldef` format is identical across `shellsetup`, `analysis` and (for
   `prep`) the residue ranges it prints, so the same file/ranges carry through.
