@@ -83,15 +83,16 @@ launch them.
 ### Cluster configuration (important for `parch submit`)
 
 `parch submit` copies SLURM job scripts (`evp_<i>_zest3.sh` for cpu,
-`evp_<i>_gpu.sh` for gpu) into each run directory and submits them. **These
-scripts are written for the original author's cluster** — partitions
+`evp_<i>_gpu.sh` for gpu) into each run directory and submits them. 
+**These scripts are written for the original author's cluster** — partitions
 (`--partition=normal,longjobs`), node excludes, and `module load gromacs` /
-`mpirun gmx_mpi`. Before using `parch submit` on your own cluster, **edit the
-`#SBATCH` headers and the `module`/`mpirun` lines** in the installed
-`parch/backup_annealing/evp_*.sh` templates (run
-`python -c "import parch, os; print(os.path.join(os.path.dirname(parch.__file__), 'backup_annealing'))"`
-to find them) to match your scheduler, partitions, and GROMACS build. (You can
-also skip `submit` entirely and launch the `shell/mid_*` runs with your own
+`mpirun gmx_mpi`.\n
+Before using `parch submit` on your own cluster, \n
+**edit the`#SBATCH` headers and the `module`/`mpirun` lines** in the installed
+`parch/backup_annealing/evp_*.sh` templates \n
+(run`python -c "import parch, os; print(os.path.join(os.path.dirname(parch.__file__), 'backup_annealing'))"`
+to find them) to match your scheduler, partitions, and GROMACS build.\n 
+(You can also skip `submit` entirely and launch the `shell/mid_*` runs with your own
 scripts; each just needs `gmx grompp`/`mdrun` on `W_init.gro`, `W_topol.top`,
 `W_ind.ndx` with `em.mdp` then `heat_nvt_<i>.mdp`.)
 
