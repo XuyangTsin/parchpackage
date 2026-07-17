@@ -251,7 +251,9 @@ just printed (so the ranges are guaranteed to line up):
   (default `blocks.txt`) for use with `parch analysis -blocks blocks.txt`.
 
 Both steps are optional — press Enter to skip a selection — and are skipped
-entirely if you answer `no`. When run non-interactively, pass `-separateshell` /
+entirely if you answer `no`. 
+
+When run non-interactively, pass `-separateshell` /
 `-makeblocks` (and, if needed, `-ionff`) so `prep` never blocks on a prompt.
 
 Finally, `prep` prints a short checklist to verify before `shellsetup`: kept
