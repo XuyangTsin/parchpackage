@@ -499,11 +499,12 @@ parch analysis -path shell -separateshell yes -shelldef shelldef_analysis.txt
 | `-overwrite`     | re-run even if a `mid_*/analysis/` already looks complete           |
 
 
-**`-shelldef shelldef_analysis.txt`** the format is consistent with the one used for setup. However,
-the shell cutoff for analysis can be **different than setup**.
+**IMPORTANT NOTICE!!!! **`-shelldef shelldef_analysis.txt`**
+
+The shell cutoff for analysis can be **different than setup**. The format is consistent with the one used for setup.
 
 **Shell cutoff for analysis:**
-For protein: 3.15 Å.
+For protein: **3.15 Å**
 For DNA and RNA: 4.50 Å
 
 **`-blocks blocks.txt`** file — split chosen residues into named atom sub-units (one or
