@@ -488,18 +488,8 @@ parch analysis -path shell -da 3.15 -separateshell no
 parch analysis -path shell -separateshell yes -shelldef shelldef_analysis.txt
 ```
 
-| Option           | Meaning                                                             |
-| ---------------- | ------------------------------------------------------------------- |
-| `-path`          | the `shell/` directory holding the `mid_*` runs                     |
-| `-da`            | uniform cutoff (Å) when `-separateshell no` (default 3.15)          |
-| `-separateshell` | `no` (uniform `-da`) or `yes` (per-residue from `-shelldef`)        |
-| `-shelldef`      | shell-definition file (required with `-separateshell yes`)          |
-| `-newwater`      | extra solvent residue name(s) beyond `SOL OPC TP3 T4D T4E`          |
-| `-blocks`        | block-mapping file to split residues into sub-units (e.g. DNA sugar/base) |
-| `-overwrite`     | re-run even if a `mid_*/analysis/` already looks complete           |
 
-
-**IMPORTANT NOTICE!!!! **`-shelldef shelldef_analysis.txt`**
+**IMPORTANT NOTICE!!!! `-shelldef shelldef_analysis.txt`**
 
 The shell cutoff for analysis can be **different than setup**. The format is consistent with the one used for setup.
 
@@ -518,6 +508,17 @@ more lines per residue range; whitespace-separated, no commas):
 
 Each named residue then yields one result per block (`5_PSU`, `5_NBP`, …);
 residues not named fall back to whole-residue analysis.
+
+
+| Option           | Meaning                                                             |
+| ---------------- | ------------------------------------------------------------------- |
+| `-path`          | the `shell/` directory holding the `mid_*` runs                     |
+| `-da`            | uniform cutoff (Å) when `-separateshell no` (default 3.15)          |
+| `-separateshell` | `no` (uniform `-da`) or `yes` (per-residue from `-shelldef`)        |
+| `-shelldef`      | shell-definition file (required with `-separateshell yes`)          |
+| `-newwater`      | extra solvent residue name(s) beyond `SOL OPC TP3 T4D T4E`          |
+| `-blocks`        | block-mapping file to split residues into sub-units (e.g. DNA sugar/base) |
+| `-overwrite`     | re-run even if a `mid_*/analysis/` already looks complete           |
 
 ---
 
