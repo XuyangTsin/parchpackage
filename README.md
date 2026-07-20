@@ -491,7 +491,7 @@ parch analysis -path shell -separateshell yes -shelldef shelldef_analysis.txt
 
 **IMPORTANT NOTICE!!!! `-shelldef shelldef_analysis.txt`**
 
-The shell cutoff for analysis can be **different than setup**. The format is consistent with the one used for setup.
+The shell cutoff for analysis ***can be different than setup***. The format is consistent with the one used for setup.
 
 **Shell cutoff for analysis:**
 For protein: **3.15 Å**
