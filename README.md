@@ -390,7 +390,7 @@ places them in flat layers above and below the membrane:
   `centre ± dsi`, spaced `-dii` apart in Z. Ions within a plane are laid on a
   hexagonal lattice opened up to spread them over the whole footprint, always at
   least `-dii` apart; ions in different planes are `-dii` apart by construction.
-- `-dii` is the minimum in-plane ion–ion distance (nm; default 3.0).
+- `-dii` is the minimum in-plane ion–ion distance, and also the plane-plane distance (nm; default 3.0).
 
 If a plane cannot hold all the counterions at the requested `-dii`, `membshell`
 fails **immediately** (before solvating) with the exact `-ionplanes` value that
