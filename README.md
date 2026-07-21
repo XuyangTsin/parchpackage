@@ -397,9 +397,10 @@ fails **immediately** (before solvating) with the exact `-ionplanes` value that
 would fit — e.g. a heavily charged membrane needing 271 ions cannot fit them in
 2 planes at `-dii 3.0` and is told to use `-ionplanes 6`.
 
-**Removing water from the membrane core (`-delewater`).** Solvation fills the
-whole box, including the hydrophobic interior, which must be emptied. `-delewater`
-takes a file of **leaflet reference atoms** whose mean Z marks the bilayer
+**Removing water from the membrane core (`-delewater`).** For lipid membrane, 
+after solvate and cut-off the hydration shell, there are usually water molecules placed inside the membrane hydrophobic core. 
+Such waters will be hard to move out druing annealing, so they should be deleted.
+`-delewater` takes a file of **leaflet reference atoms** whose mean Z marks the bilayer
 mid-plane; the mean Z of the atoms above / below it defines the upper and lower
 head-group planes, and every water between those two planes is deleted. The file
 is either a bare atom-name list or a full MDAnalysis selection:
