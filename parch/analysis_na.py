@@ -1,16 +1,23 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""parch analysis_old -- water-shell hydration analysis (sample-then-sort trend).
+"""parch analysis_na -- DNA/RNA-reproduction hydration analysis (sort-then-sample).
 
-The ORIGINAL analysis (refactor of ``3_all_water_analysis_PTM.py``), kept as
-``parch analysis_old``. It is identical to ``parch analysis`` EXCEPT for the
-monotonic dehydration trend (``num_ww_temp``):
+Use this command ONLY to reproduce the previous DNA/RNA PARCH work. For new
+work, use the default ``parch analysis`` (sample-then-sort) instead.
 
-  parch analysis_old  (SAMPLE-THEN-SORT): read the 11 temperature frames, then
-                      enforce the non-increasing envelope among only those 11
-                      points. Matches the old PTM/protein scripts.
-  parch analysis      (SORT-THEN-SAMPLE): enforce the envelope over EVERY frame
-                      first, then sample -- the current default.
+For each ``mid_*`` run, counts how many solvent molecules sit within a cutoff of
+each solute residue (or ``-blocks`` sub-unit), then builds the monotonic
+dehydration trend (``num_ww_temp``) with the FULL-TRAJECTORY envelope
+(SORT-THEN-SAMPLE): enforce the non-increasing envelope over EVERY trajectory
+frame first (all ~1000 frames), then read off the 11 temperature points. This is
+less sensitive to which 11 frames are sampled than the alternative
+SAMPLE-THEN-SORT (sample 11 frames, then enforce monotonicity among only those),
+which is the default ``parch analysis``. The full-trajectory envelope matches
+``sorting_1st_array3D`` in the old DNA/protein analysis scripts.
+
+When feeding an ``analysis_na`` trend into ``parch calpv``, pair it with a
+``_na`` ``hard_ref`` (e.g. ``-water_ff charmm_tip3p_na``) so the reference
+matches the sort-then-sample series.
 
 Given a completed PARCH workspace::
 
@@ -25,10 +32,10 @@ Given a completed PARCH workspace::
 it locates every ``mid_*`` directory and, for each one independently, counts how
 many solvent molecules sit within a cutoff of each solute residue -- first in
 the energy-minimised structure (``init_ww``) and then across the heating
-trajectory (``NUM_w``) -- removes the up-fluctuations to keep the monotonic
-dehydration trend (``num_ww_temp``), and writes b-factor-coloured PDBs of the
-solute at 11 points along the temperature ramp. All outputs are written into a
-fresh ``mid_x/analysis/`` directory.
+trajectory (``NUM_w``) -- builds the full-trajectory monotonic dehydration trend
+(``num_ww_temp``), and writes b-factor-coloured PDBs of the solute at 11 points
+along the temperature ramp. All outputs are written into a fresh
+``mid_x/analysis/`` directory.
 
 Shell thickness:
   -separateshell no  : apply a single -da cutoff to every solute residue.
@@ -65,9 +72,9 @@ TEMP_POINTS = 11
 # =========================================================================== #
 def build_parser():
     p = argparse.ArgumentParser(
-        prog="parch_analysis_old",
+        prog="parch_analysis_na",
         description="Water-shell hydration analysis over the PARCH annealing ramp "
-                    "(sample-then-sort monotonic trend; the original analysis).",
+                    "(full-trajectory sort-then-sample trend; DNA/RNA reproduction only).",
         allow_abbrev=False,
     )
     p.add_argument("-path", dest="path", required=True,
@@ -98,7 +105,7 @@ def build_parser():
 # Helpers
 # =========================================================================== #
 def tag_for(da):
-    """'3.15A' for da=3.15."""
+    """'3-15A' for da=3.15 -- matches the original output naming."""
     return ("%g" % da) + "A"
 
 
@@ -357,12 +364,16 @@ def analyse_mid(mid_dir, args, solvent_sel, tag, block_specs):
     step = (n_frames - 1) / float(TEMP_POINTS - 1)
     frame_idx = [min(int(round(t * step)), n_frames - 1) for t in range(TEMP_POINTS)]
 
-    # ---- monotonic dehydration trend at the sampled temperatures ---------- #
-    temp_cols = num_per_frame[frame_idx, :].T.astype(float)   # units x temp_points
-    for i in range(n_units):
-        for j in range(1, TEMP_POINTS):
-            if temp_cols[i][j - 1] < temp_cols[i][j]:
-                temp_cols[i][j] = temp_cols[i][j - 1]
+    # ---- monotonic dehydration trend: full-trajectory envelope, then sample  #
+    # Enforce the non-increasing envelope over EVERY frame first (all frames),
+    # then read off the temperature points -- applied to ALL units (whether or
+    # not -blocks is used). More robust than sampling 11 frames and then
+    # enforcing monotonicity among only those (that is the default `parch analysis`).
+    full = num_per_frame.astype(float).copy()                 # frames x units
+    for i in range(1, n_frames):
+        m = full[i - 1] < full[i]
+        full[i, m] = full[i - 1, m]
+    temp_cols = full[frame_idx, :].T                          # units x temp_points
     np.savetxt(os.path.join(outdir, "num_ww_temp_%s.txt" % tag), temp_cols)
 
     # ---- b-factor-coloured solute PDBs along the ramp --------------------- #
@@ -438,6 +449,6 @@ def main(argv=None):
 
 if __name__ == "__main__":
     argv = sys.argv[1:]
-    if argv and argv[0] == "analysis_old":
+    if argv and argv[0] == "analysis_na":
         argv = argv[1:]
     main(argv)

@@ -12,7 +12,7 @@ import sys
 from .shellsetup import main, die
 from .membshell import main as membshell_main
 from .analysis import main as analysis_main
-from .analysis_old import main as analysis_old_main
+from .analysis_na import main as analysis_na_main
 from .calpv import main as calpv_main
 from .cval import main as cval_main
 from .prep import main as prep_main
@@ -33,8 +33,8 @@ def cli_parch(argv=None):
               "  shellsetup   Build a hydration shell (+ counterions) for PARCH annealing.\n"
               "  membshell    Build a hydration shell (+ counterions) for a lipid membrane.\n"
               "  submit       Stage simulation files into mid_* and submit the annealing jobs.\n"
-              "  analysis     Water-shell hydration analysis (full-trajectory trend).\n"
-              "  analysis_old Same as analysis but sample-then-sort trend (original).\n"
+              "  analysis     Water-shell hydration analysis (sample-then-sort trend; default).\n"
+              "  analysis_na  Same as analysis but sort-then-sample trend (DNA/RNA reproduction only).\n"
               "  calpv        PARCH values from analysis results, averaged over mid_* runs.\n"
               "  cval         Raw correlation values (pre-hard_ref) from analysis results, "
               "averaged over mid_* runs.\n\n"
@@ -51,15 +51,15 @@ def cli_parch(argv=None):
         submit_main(rest)
     elif cmd == "analysis":
         analysis_main(rest)
-    elif cmd == "analysis_old":
-        analysis_old_main(rest)
+    elif cmd == "analysis_na":
+        analysis_na_main(rest)
     elif cmd in ("calpv", "calval"):
         calpv_main(rest)
     elif cmd == "cval":
         cval_main(rest)
     else:
         die("unknown command %r (available commands: prep, shellsetup, membshell, "
-            "submit, analysis, analysis_old, calpv, cval)" % cmd)
+            "submit, analysis, analysis_na, calpv, cval)" % cmd)
 
 
 if __name__ == "__main__":

@@ -17,9 +17,10 @@ slab rather than on a sphere, and can delete the waters that solvation buries
 inside the membrane core. The rest of the pipeline is unchanged.
 
 Two auxiliary commands share the same inputs/outputs as their counterparts and
-are documented at the end: `parch analysis_old` (the original sample-then-sort
-hydration trend) and `parch cval` (raw correlation integrals, before the
-`hard_ref` normalisation that turns them into PARCH values).
+are documented at the end: `parch analysis_na` (the sort-then-sample hydration
+trend, kept **only** to reproduce the previous DNA/RNA work) and `parch cval`
+(raw correlation integrals, before the `hard_ref` normalisation that turns them
+into PARCH values).
 
 ## Installation
 
@@ -65,9 +66,9 @@ use your own for the upstream equilibration / topology.) This puts the single
 | `parch shellsetup`  | build a hydration shell (+ counterions) and set up the box |
 | `parch membshell`   | shellsetup for a whole lipid membrane: planar ion layers, non-cubic box, intra-core water removal |
 | `parch submit`      | stage simulation files into `mid_*` and submit jobs |
-| `parch analysis`    | analyse the per-residue water rentation over the annealing     |
+| `parch analysis`    | analyse the per-residue water rentation over the annealing (sample-then-sort trend; default) |
 | `parch calpv`       | calculate PARCH values per-residue or per-block, averaged over `mid_*` runs            |
-| `parch analysis_old`| same as `analysis` but the original sample-then-sort dehydration trend (auxiliary) |
+| `parch analysis_na` | same as `analysis` but the sort-then-sample dehydration trend, for DNA/RNA reproduction only (auxiliary) |
 | `parch cval`        | raw integrated correlation values (pre-hard_ref), averaged over `mid_*` runs (auxiliary) |
 
 Verify the install:
@@ -342,10 +343,10 @@ Auxiliary files (hydrated-ion `.gro`, INP make_ndx templates) come from
 ## 2b. `parch membshell` — build the hydration shell for a whole membrane
 
 The membrane counterpart of `shellsetup`. Use it when the "solute" is an entire
-lipid bilayer (optionally with an embedded membrane protein) instead of a
-globular molecule. The input should be **membrane-only** (lipids/protein, no
-water or ions — e.g. straight from `prep`) and must still carry its
-**equilibrated box vectors**, because `membshell` keeps the periodic XY size.
+lipid bilayer (optionally with an embedded membrane protein). 
+The input should be **membrane-only** (lipids and/or with protein, no
+water or ions — e.g. straight from `prep`) and **MUST** still carry its
+**equilibrated box vectors**, because `membshell` needs the periodic XY size.
 
 It shares every argument with `shellsetup` (`-f`/`-p`/`-o`, `-dshell`,
 `-separateshell`/`-shelldef`, `-netcharge`, `-nmids`, `-water`, `-watername`,
@@ -368,7 +369,7 @@ writes everything to a `shell/` subdirectory, and copies the key outputs
 in the input's own equilibrated box, so only a physical amount of water is added
 before the shell is carved.
 
-**Non-cubic box.** Membrane boxes are elongated along the normal (Z) and keep
+**Non-cubic box.** Boxes for membrane setup are elongated along the normal (Z) and keep
 their periodic lateral (XY) size, so the box is set independently:
 
 - `-dbxy` pads XY: `box_xy = membrane_xy + 2*dbxy`. Use `0` (default) to keep the
@@ -398,8 +399,10 @@ would fit — e.g. a heavily charged membrane needing 271 ions cannot fit them i
 2 planes at `-dii 3.0` and is told to use `-ionplanes 6`.
 
 **Removing water from the membrane core (`-delewater`).** For lipid membrane, 
-after solvate and cut-off the hydration shell, there are usually water molecules placed inside the membrane hydrophobic core. 
-Such waters will be hard to move out druing annealing, so they should be deleted.
+after solvate and cut-off the hydration shell, there are usually water molecules 
+placed inside the membrane hydrophobic core. Such waters will be hard to move 
+out druing annealing, so they should be deleted.
+
 `-delewater` takes a file of **leaflet reference atoms** whose mean Z marks the bilayer
 mid-plane; the mean Z of the atoms above / below it defines the upper and lower
 head-group planes, and every water between those two planes is deleted. The file
@@ -492,7 +495,8 @@ parch analysis -path shell -separateshell yes -shelldef shelldef_analysis.txt
 
 **IMPORTANT NOTICE!!!! `-shelldef shelldef_analysis.txt`**
 
-The shell cutoff for analysis ***can be different than setup***. The format is consistent with the one used for setup.
+The shell cutoff for analysis ***can be different than setup***. But the format 
+is consistent with the one used for setup.
 
 **Shell cutoff for analysis:**
 For protein: **3.15 Å**
@@ -542,26 +546,21 @@ parch calpv -path shell -water_ff charmm_tip3p -nmids 5 -mean_without_min_max ye
 | `-mean_without_min_max` | `yes` (default) trims lowest+highest run per unit; auto-disabled when < 5 runs |
 | `-blocks`               | block-mapping file (only needed to colour the output PDBs per sub-unit) |
 
-**`hard_ref` values (recalibrated).** The default `hard_ref` for each water
-model/force field was **re-derived for the current `parch analysis`** (the
-full-trajectory *sort-then-sample* trend) and is the value used by default:
+**`hard_ref` values.** The default `hard_ref` for each water model/force field is
+paired with the default **`parch analysis`** (the *sample-then-sort* trend) and
+is the value used by default:
 
 | `-water_ff`     | `hard_ref` (default) |
 | --------------- | -------------------- |
-| `charmm_tip3p`  | 557187.5             |
-| `charmm_tip4p`  | 595454.55            |
-| `charmm_tip4pew`| 568142.05            |
-| `charmm_tip5p`  | 609215.91            |
-| `amber_opc`     | 455075.76            |
-| `amber_tip3p`   | 361196.97            |
+| `charmm_tip3p`  | 828602.27            |
+| `charmm_tip4p`  | 834204.55            |
+| `charmm_tip4pew`| 793704.55            |
+| `charmm_tip5p`  | 886392.05            |
+| `amber_opc`     | 548924.24            |
+| `amber_tip3p`   | 813643.94            |
 
-The original references are **kept for backward compatibility** under an `_old`
-suffix (`charmm_tip3p_old` = 828602.27, `charmm_tip4p_old` = 834204.55,
-`charmm_tip4pew_old` = 793704.55, `charmm_tip5p_old` = 886392.05,
-`amber_opc_old` = 548924.2424, `amber_tip3p_old` = 813643.94). Use the `_old`
-value **only** when your dehydration trend came from `parch analysis_old`
-(sample-then-sort), so the reference matches how the series was built. For any
-other reference, pass `-newhardref <value>` (overrides `-water_ff`).
+For any other costumized reference, pass `-newhardref <value>` (overrides
+`-water_ff`). Or add them as new ones in the `calpv.py`.
 
 Outputs under `shell/` (the two averaged flavours are mutually exclusive):
 
@@ -581,35 +580,39 @@ PARCH value from each run, and the across-run average and std.
 
 These two are variants of the pipeline steps above; most users never need them.
 
-### `parch analysis_old` — original (sample-then-sort) hydration trend
+### `parch analysis_na` — sort-then-sample hydration trend (DNA/RNA reproduction only)
 
 Drop-in alternative to `parch analysis` with the **same options** (`-path`,
 `-da`, `-separateshell`, `-shelldef`, `-newwater`, `-blocks`, `-overwrite`) and
 the same outputs. The only difference is how the monotonic dehydration trend
 (`num_ww_temp`) is built:
 
-- `parch analysis_old` (**sample-then-sort**): read the 11 temperature frames,
+- `parch analysis` (**sample-then-sort**): read the 11 temperature frames,
   then enforce the non-increasing envelope among *only* those 11 points. This
-  matches the original PTM/protein scripts (`3_all_water_analysis_PTM.py`).
-- `parch analysis` (**sort-then-sample**): enforce the non-increasing envelope
-  over *every* frame first, then sample the 11 points — the current default.
+  matches the original PTM/protein scripts (`3_all_water_analysis_PTM.py`) — the
+  default.
+- `parch analysis_na` (**sort-then-sample**): enforce the non-increasing envelope
+  over *every* frame first, then sample the 11 points. Matches
+  `sorting_1st_array3D` in the old DNA/protein analysis scripts.
 
 ```bash
-parch analysis_old -path shell -da 3.15 -separateshell no
+parch analysis_na -path shell -da 3.15 -separateshell no
 ```
 
-Use it only to reproduce results generated with the pre-refactor scripts;
-`parch analysis` is preferred for new work. When you feed an `analysis_old`
-trend into `parch calpv`, pair it with an `_old` `hard_ref`
-(e.g. `-water_ff charmm_tip3p_old`) so the reference matches the
-sample-then-sort series.
+Use it **only** to reproduce the previous DNA/RNA PARCH work; `parch analysis`
+is preferred for all new work. 
+The previous DNA/RNA work share the same `hard_ref` as protein's work, 
+as listed in previous section.
+When you feed an `analysis_na` trend into `parch calpv`, pair it with correct `hard_ref`. 
 
-### `parch cval` — raw correlation values (pre-`hard_ref`)
 
-Same inputs as `parch calpv` (the `num_ww_temp_<tag>.txt` in each
-`mid_*/analysis/`), but reports each unit's time-correlation integral **AS IS**,
+### `parch cval` — raw correlation values (useful for getting a new `hard_ref`)
+
+It reports each unit's time-correlation integral **AS IS**,
 without dividing by a `hard_ref` — i.e. the value `parch calpv` computes right
-before it scales by `hard_ref` to produce the PARCH value. Because there is no
+before it scales by `hard_ref` to produce the PARCH value. 
+Same inputs as `parch calpv` (the `num_ww_temp_<tag>.txt` in each
+`mid_*/analysis/`). As there is no
 normalisation, there is no `-water_ff`/`-newhardref` option.
 
 ```bash
@@ -636,7 +639,7 @@ flavours are mutually exclusive):
 ## Notes
 
 - Run any command with `-h` for the full option list.
-- `prep`/`analysis`/`analysis_old`/`calpv`/`cval` need only MDAnalysis;
+- `prep`/`analysis`/`analysis_na`/`calpv`/`cval` need only MDAnalysis;
   `shellsetup` and `membshell` also need `gmx`; `submit` needs SLURM (`sbatch`).
 - The `-shelldef` format is identical across `shellsetup`, `analysis` and (for
   `prep`) the residue ranges it prints, so the same file/ranges carry through.

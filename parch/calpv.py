@@ -41,21 +41,23 @@ from .analysis import parse_blocks, build_units, make_refs, ANALYSIS_DIRNAME
 
 # Reference 'hard_ref' per water model + force field (from 4_pv_correlation.py).
 HARD_REF = {
-    "charmm_tip3p":   557187.5,
-    "charmm_tip4p":   595454.55,
-    "charmm_tip4pew": 568142.05,
-    "charmm_tip5p":   609215.91,
-    "amber_opc":      455075.76,
-    "amber_tip3p":    361196.97,
-    #the old reference values are kept for backward compatibility, 
-    #which used for sort-then-sample in the old analysis,
-    #the new ones above are used by default
-    "charmm_tip3p_old":   828602.27,
-    "charmm_tip4p_old":   834204.55,
-    "charmm_tip4pew_old": 793704.55,
-    "charmm_tip5p_old":   886392.05,
-    "amber_opc_old":      548924.2424,
-    "amber_tip3p_old":    813643.94,
+    # Default: paired with `parch analysis` (SAMPLE-THEN-SORT trend).
+    "charmm_tip3p":   828602.27,
+    "charmm_tip4p":   834204.55,
+    "charmm_tip4pew": 793704.55,
+    "charmm_tip5p":   886392.05,
+    "amber_opc":      548924.2424,
+    "amber_tip3p":    813643.94,
+
+    # Down side was a test set for lys hard_ref
+    # that are re-analyed and got by `parch analysis_na` (SORT-THEN-SAMPLE trend);
+    # Just kept as records. Do not use them
+    #"charmm_tip3p_test":   557187.50,
+    #"charmm_tip4p_test":   595454.55,
+    #"charmm_tip4pew_test": 568142.05,
+    #"charmm_tip5p_test":   609215.91,
+    #"amber_opc_test":      455075.76,
+    #"amber_tip3p_test":    361196.97,
 }
 
 # 11 annealing temperature points (time in ps, temperature in K).
