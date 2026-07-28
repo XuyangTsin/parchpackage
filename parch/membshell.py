@@ -92,19 +92,19 @@ def build_parser():
     p.add_argument("-dshell", type=float, default=4.15,
                    help="Uniform water-shell thickness, in Angstrom, applied to the whole "
                         "membrane when -separateshell no (default: 4.15).")
-    p.add_argument("-dsi", type=float, default=4.0,
+    p.add_argument("-dsi", type=float, default=10.0,
                    help="Distance from the system's Z CENTRE to the INNERMOST ion plane, nm. "
                         "Must exceed the solute's Z half-extent, or the ions land inside the "
-                        "membrane/protein (default: 4.0).")
+                        "membrane/protein (default: 10.0).")
     p.add_argument("-dii", type=float, default=3.0,
                    help="Min distance between any two ions in the same plane, nm (default: 3.0).")
-    p.add_argument("-dbxy", type=float, default=0.0,
+    p.add_argument("-dbxy", type=float, default=3.0,
                    help="Padding between the membrane and the box boundary in X and Y, nm. "
                         "box_xy = membrane_xy + 2*dbxy. Use 0 to preserve the input periodic "
-                        "XY dimensions (default: 0.0).")
-    p.add_argument("-dbz", type=float, default=2.0,
+                        "XY dimensions (default: 3.0).")
+    p.add_argument("-dbz", type=float, default=5.0,
                    help="Distance from the OUTERMOST ion plane to the box boundary in Z, nm "
-                        "(default: 2.0). The full box height follows from the plane layout: "
+                        "(default: 5.0). The full box height follows from the plane layout: "
                         "box_z = 2*(dbz + (ionplanes/2 - 1)*dii + dsi), with the system "
                         "centred inside it.")
     p.add_argument("-ionplanes", type=int, choices=[2, 4, 6, 8], default=2,
